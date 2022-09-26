@@ -1,1 +1,1 @@
-# lisst-motion-visualization
+# LISST motion visualization
