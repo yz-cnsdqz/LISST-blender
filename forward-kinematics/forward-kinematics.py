@@ -205,7 +205,7 @@ def create_animation_inverse_kinematics(armature, motiondata):
 
     for frame in range(len(joint_rot_data)):
         armature.location = Vector(motiondata['J_locs'][frame, 0, 0])
-
+        
         for parent, children in CHILDREN_TABLE.items():
             for child in children: 
                 
@@ -236,8 +236,16 @@ def create_animation_inverse_kinematics(armature, motiondata):
         armature.keyframe_insert('rotation_quaternion', frame=frame)
         bones = armature.pose.bones
         for bone in bones:
-            bone.keyframe_insert('rotation_quaternion', frame=frame)       
-
+            bone.keyframe_insert('rotation_quaternion', frame=frame)
+        break   
+            
+    
+def reset_bones():
+    for parent, children in CHILDREN_TABLE.items():
+            for child in children: 
+                 bone_name = BONE_NAMES[(parent, child)]
+                 armature.pose.bones[bone_name].matrix = canonical_bone_matrixes[bone_name]
+                 bpy.context.view_layer.update()
                 
 def get_current_joint_location(armature, joint_name, parent_joint):
     bone_name = BONE_NAMES[(parent_joint, joint_name)]
@@ -252,10 +260,11 @@ def create_animation_forward_kinematics(armature, motiondata):
 
     for frame in range(len(joint_rot_data)):
         scene.frame_set(frame)
+        reset_bones()
         
         joint_rotmats = joint_rot_data[frame, 0]
         
-#        armature.location = Vector(motiondata['J_locs_w'][i, 0, 0])
+        armature.location = Vector(motiondata['J_locs'][frame, 0, 0])
 #        armature.rotation_mode = 'QUATERNION'
 #        armature.rotation_quaternion = Matrix(joint_rotmats[0]).to_quaternion()
 
@@ -270,9 +279,20 @@ def create_animation_forward_kinematics(armature, motiondata):
 
                 child_rot = Matrix(joint_rotmats[child_joint_index])
                 
-                child_parent_bone_rot =   child_rot.to_4x4() @ parent_rot.to_4x4().transposed()
+                bone_rot = child_rot.to_4x4() @ parent_rot.to_4x4().transposed()
+                
+                head_location = armature.pose.bones[bone_name].head 
+                
+                M = (
+                Matrix.Translation(head_location) @
+                bone_rot @
+                Matrix.Translation(-head_location)
+                ) 
+                armature.pose.bones[bone_name].matrix = M @ armature.pose.bones[bone_name].matrix
+                bpy.context.view_layer.update()
+#                child_parent_bone_rot =   bone_rot
 
-                armature.pose.bones[bone_name].rotation_quaternion = child_parent_bone_rot.to_quaternion()
+#                armature.pose.bones[bone_name].rotation_quaternion = child_parent_bone_rot.to_quaternion()
                 
 
         
@@ -281,6 +301,8 @@ def create_animation_forward_kinematics(armature, motiondata):
         bones = armature.pose.bones
         for bone in bones:
             bone.keyframe_insert('rotation_quaternion', frame=frame)
+        break
+        
 
         
 
@@ -289,7 +311,13 @@ if __name__ == '__main__':
         print("Importing animation")
         with open(INPUT_FILE_PATH, "rb") as f:
             motiondata = pickle.load(f, encoding="latin1")
+            
+        
 
+#        motiondata['J_rotmat'] = np.expand_dims(motiondata['J_rotmat'], axis=1)
+#        motiondata['J_locs'] = np.expand_dims(motiondata['J_locs'], axis=1)
+        
+        
         armature = create_armature(motiondata['J_shape'])
         create_animation_forward_kinematics(armature, motiondata)
         
