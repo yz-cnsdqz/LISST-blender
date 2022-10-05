@@ -9,6 +9,7 @@ from mathutils import Vector, Matrix, Quaternion
 # Input pkl path
 # INPUT_FILE_PATH = "C:\\Users\\Lukas\\Projects\\lisst-motion-visualization\\input\\motion_0.pkl"
 INPUT_FILE_PATH = "/home/yzhang/workspaces/LISST/results/src/LISST_SHAPER_v0/results/mocap_zju_2/results.pkl"
+DURATION = 1
 
 # Animation properties
 FPS_TARGET = 30
@@ -47,39 +48,46 @@ JOINT_NAMES = [
 'rfingers', 
 'rthumb'
 ]
+# CHILDREN_TABLE = {
+# 'root': ['lhipjoint', 'rhipjoint', 'lowerback'],
+#  'lhipjoint': ['lfemur'], 
+#  'lfemur': ['ltibia'], 
+#  'ltibia': ['lfoot'], 
+#  'lfoot': ['ltoes'],
+#  'ltoes': [], 
+#  'rhipjoint': ['rfemur'], 
+#  'rfemur': ['rtibia'], 
+#  'rtibia': ['rfoot'], 
+#  'rfoot': ['rtoes'], 
+#  'rtoes': [], 
+#  'lowerback': ['upperback'], 
+#  'upperback': ['thorax'], 
+#  'thorax': ['lowerneck', 'lclavicle', 'rclavicle'], 
+#  'lowerneck': ['upperneck'], 
+#  'upperneck': ['head'], 
+#  'head': [], 
+#  'lclavicle': ['lhumerus'], 
+#  'lhumerus': ['lradius'], 
+#  'lradius': ['lwrist'], 
+#  'lwrist': ['lhand', 'lthumb'], 
+#  'lhand': ['lfingers'], 
+#  'lfingers': [], 
+#  'lthumb': [], 
+#  'rclavicle': ['rhumerus'], 
+#  'rhumerus': ['rradius'], 
+#  'rradius': ['rwrist'], 
+#  'rwrist': ['rhand', 'rthumb'], 
+#  'rhand': ['rfingers'], 
+#  'rfingers': [], 
+#  'rthumb': []
+#  }
+
+
 CHILDREN_TABLE = {
 'root': ['lhipjoint', 'rhipjoint', 'lowerback'],
- 'lhipjoint': ['lfemur'], 
- 'lfemur': ['ltibia'], 
- 'ltibia': ['lfoot'], 
- 'lfoot': ['ltoes'],
- 'ltoes': [], 
- 'rhipjoint': ['rfemur'], 
- 'rfemur': ['rtibia'], 
- 'rtibia': ['rfoot'], 
- 'rfoot': ['rtoes'], 
- 'rtoes': [], 
- 'lowerback': ['upperback'], 
- 'upperback': ['thorax'], 
- 'thorax': ['lowerneck', 'lclavicle', 'rclavicle'], 
- 'lowerneck': ['upperneck'], 
- 'upperneck': ['head'], 
- 'head': [], 
- 'lclavicle': ['lhumerus'], 
- 'lhumerus': ['lradius'], 
- 'lradius': ['lwrist'], 
- 'lwrist': ['lhand', 'lthumb'], 
- 'lhand': ['lfingers'], 
- 'lfingers': [], 
- 'lthumb': [], 
- 'rclavicle': ['rhumerus'], 
- 'rhumerus': ['rradius'], 
- 'rradius': ['rwrist'], 
- 'rwrist': ['rhand', 'rthumb'], 
- 'rhand': ['rfingers'], 
- 'rfingers': [], 
- 'rthumb': []
  }
+
+
 BONE_NAMES = {
 ('root', 'lhipjoint'): 'left_hip', 
 ('root', 'rhipjoint'): 'right_hip', 
@@ -199,7 +207,6 @@ def create_armature(bone_lengths, name):
 
 
 
-
 def create_animation_inverse_kinematics(armature, motiondata, duration=100):
     scene = bpy.data.scenes['Scene']
     scene.render.fps = FPS_TARGET
@@ -215,7 +222,6 @@ def create_animation_inverse_kinematics(armature, motiondata, duration=100):
                 
                 child_current = get_current_joint_location(armature, child, parent)
                 child_target = Vector(joint_loc_data[frame,  JOINT_NAMES.index(child)] - motiondata['J_locs'][frame,  0])
-                
                 
                 parent_current = Vector(joint_loc_data[frame,  JOINT_NAMES.index(parent)] - motiondata['J_locs'][frame,  0])
                 link_current = child_current - parent_current
@@ -272,35 +278,38 @@ def create_animation_forward_kinematics(armature, motiondata, duration=100):
     for frame in range(min(len(joint_rot_data), duration)):
         scene.frame_set(frame)
         reset_bones(armature)
-        
         joint_rotmats = joint_rot_data[frame]
         
+        # set root transform
         armature.location = Vector(motiondata['J_locs'][frame,  0])
         armature.rotation_mode = 'QUATERNION'
         armature.rotation_quaternion = (numpy2Matrix(joint_rotmats[0]).to_4x4() @ ROT_TO_BLENDER).to_quaternion()
-        # for parent, children in CHILDREN_TABLE.items():
-        #     for child in children:
-        #         bone_name = BONE_NAMES[(parent, child)]
-                
-        #         parent_joint_index = JOINT_NAMES.index(parent)
-        #         child_joint_index = JOINT_NAMES.index(child)
-                
-        #         parent_rot = numpy2Matrix(joint_rotmats[parent_joint_index])
 
-        #         child_rot = numpy2Matrix(joint_rotmats[child_joint_index])
+        for parent, children in CHILDREN_TABLE.items():
+            for child in children:
+                bone_name = BONE_NAMES[(parent, child)]
                 
-        #         bone_rot =  child_rot.to_4x4() @ parent_rot.to_4x4().transposed()
-        #         # bone_rot =  parent_rot.to_4x4().transposed() @ child_rot.to_4x4()
-        #         head_location = armature.pose.bones[bone_name].head 
+                parent_joint_index = JOINT_NAMES.index(parent)
+                child_joint_index = JOINT_NAMES.index(child)
                 
-        #         M = (
-        #         Matrix.Translation(head_location) @
-        #         bone_rot @
-        #         Matrix.Translation(-head_location)
-        #         ) 
-        #         armature.pose.bones[bone_name].matrix = M @ armature.pose.bones[bone_name].matrix
+                parent_rot = numpy2Matrix(joint_rotmats[parent_joint_index]).to_4x4() 
+                print(joint_rotmats[0])
+                child_rot = numpy2Matrix(joint_rotmats[child_joint_index]).to_4x4()
                 
-        #         child_parent_bone_rot =   bone_rot
+                bone_rot =  child_rot @ parent_rot.transposed()
+                head_location = armature.pose.bones[bone_name].head 
+
+                # M = (
+                # Matrix.Translation(head_location) @
+                # bone_rot @
+                # Matrix.Translation(-head_location)
+                # ) 
+                M = (
+                child_rot
+                ) 
+                armature.pose.bones[bone_name].matrix = M @ armature.pose.bones[bone_name].matrix
+                
+                # child_parent_bone_rot =   bone_rot
 
         bpy.context.view_layer.update()
                 
@@ -313,7 +322,6 @@ def create_animation_forward_kinematics(armature, motiondata, duration=100):
             bone.keyframe_insert('rotation_quaternion', frame=frame)
             
         
-        
 
         
 
@@ -323,17 +331,15 @@ if __name__ == '__main__':
         with open(INPUT_FILE_PATH, "rb") as f:
             motiondata = pickle.load(f, encoding="latin1")
             
-        
         # motiondata['J_rotmat'] = np.expand_dims(motiondata['J_rotmat'], axis=1)
         # motiondata['J_locs'] = np.expand_dims(motiondata['J_locs'], axis=1)
         # motiondata['J_shape'] = np.expand_dims(motiondata['J_shape'], axis=0)
         
-        
         armature = create_armature(motiondata['J_shape'], "forward_kinematics_body")
-        create_animation_forward_kinematics(armature, motiondata)
+        create_animation_forward_kinematics(armature, motiondata,duration=DURATION)
         
         armature2 = create_armature(motiondata['J_shape'], "inverse_kinematics_body")
-        create_animation_inverse_kinematics(armature2, motiondata)
+        create_animation_inverse_kinematics(armature2, motiondata,duration=DURATION)
 
     else:
         print("Input file not found")
