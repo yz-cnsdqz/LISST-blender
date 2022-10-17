@@ -73,6 +73,17 @@ CMU_CHILDREN_TABLE = {
 
 # mixamo armature properties
 
+def getJointNames(children_table):
+    out = []
+    for key, val in children_table.items():
+        if key not in out:
+            out.append(key)
+        for vv in val:
+            out.append(vv)
+    
+    return out
+
+
 # the body model, pad with 'mixamorig:' in the front. Check blender for details.
 MIXAMO_CHILDREN_TABLE_BODY = {
 'Hips': ['Spine', 'LeftUpLeg', 'RightUpLeg'],
@@ -97,12 +108,7 @@ MIXAMO_CHILDREN_TABLE_BODY = {
 'RightToeBase': ['RightToe_End'],
  }
 
-MIXAMO_JOINT_NAMES_BODY = []
-for key, val in MIXAMO_CHILDREN_TABLE_BODY.items():
-    if key not in MIXAMO_JOINT_NAMES_BODY:
-        MIXAMO_JOINT_NAMES_BODY.append(key)
-    for vv in val:
-        MIXAMO_JOINT_NAMES_BODY.append(vv)
+MIXAMO_JOINT_NAMES_BODY = getJointNames(MIXAMO_CHILDREN_TABLE_BODY)
 
 
 # the hand hierarchy. Check blender for visualization. 
