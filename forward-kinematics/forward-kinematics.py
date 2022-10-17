@@ -4,8 +4,8 @@ import bpy
 import sys
 import numpy as np
 import math
-
 from mathutils import Vector, Matrix, Quaternion
+
 # Input pkl path
 # INPUT_FILE_PATH = "C:\\Users\\Lukas\\Projects\\lisst-motion-visualization\\input\\motion_0.pkl"
 #INPUT_FILE_PATH = "/home/yzhang/workspaces/LISST/results/src/LISST_SHAPER_v0/results/mocap_zju_2/results.pkl"
@@ -13,7 +13,7 @@ INPUT_FILE_PATH = r"C:\Users\zhang\Downloads\results.pkl"
 # Animation properties
 FPS_TARGET = 30
 
-# Armature properties
+'''Armature properties'''
 JOINT_NAMES = [
 'root', 
 'lhipjoint', 
@@ -112,10 +112,6 @@ BONE_NAMES = {
 ('rwrist', 'rthumb'): 'right_thumb', 
 ('rhand', 'rfingers'): 'right_fingers'
 }
-
-joint_parent_dict = {}
-relative_rotation_around_parent = {}
-
 JOINT_DEFAULT_ORIENTATION = np.array([[ 0.0000e+00,  0.0000e+00,  0.0000e+00],
 [ 6.2366e-01, -7.1724e-01,  3.1083e-01],
 [ 3.4202e-01, -9.3969e-01,  0.0000e+00],
@@ -148,54 +144,18 @@ JOINT_DEFAULT_ORIENTATION = np.array([[ 0.0000e+00,  0.0000e+00,  0.0000e+00],
 [-1.0000e+00, -4.4909e-11,  3.9283e-26],
 [-7.0711e-01, -6.3488e-11,  7.0711e-01]])
 
-canonical_joint_locations = {}
 
+'''global placeholders'''
+canonical_joint_locations = {}
 canonical_bone_matrixes = {}
+joint_parent_dict = {}
+relative_rotation_around_parent = {}
 
 ROT_Z_180 = Matrix.Rotation(math.radians(180), 4, 'Z')
 ROT_X_NEG90 = Matrix.Rotation(math.radians(-90), 4, 'X')
 ROT_TO_BLENDER = ROT_X_NEG90 @ ROT_Z_180
 
-def create_yup_armature(bone_lengths, name):
-    armature = bpy.data.armatures.new("Armature_"+name)
-    armature_object = bpy.data.objects.new(name, armature)
-    bpy.context.scene.collection.objects.link(armature_object)
-    bpy.context.view_layer.objects.active = armature_object
-    armature_object.select_set(True)
-    bpy.ops.object.mode_set(mode='EDIT')
-
-    rootbone = armature.edit_bones.new('root')
-    rootbone.head = (0, 0, 0)
-    rootbone.tail = rootbone.head + Vector([0, 0.001, 0])
-    joint_parent_dict['root'] = rootbone
-    canonical_joint_locations['root'] = rootbone.head
-
-    joint_orientations = dict(zip(JOINT_NAMES, JOINT_DEFAULT_ORIENTATION))
-
-    for parent, children in CHILDREN_TABLE.items():
-        for child in children:
-            bone_name = BONE_NAMES[(parent, child)]
-            bone_length_current = bone_lengths[JOINT_NAMES.index(child)]
-            bone = armature.edit_bones.new(bone_name)
-            
-            child_joint_location = canonical_joint_locations[parent] + Vector(joint_orientations[child]) * bone_length_current
-            
-            bone.head = tuple(canonical_joint_locations[parent])    
-            bone.tail = bone.head + Vector([0,bone_length_current,0])#child_joint_location
-            
-            bone.parent = joint_parent_dict[parent]
-            
-            canonical_joint_locations[child] = child_joint_location
-            joint_parent_dict[child] = bone
-            canonical_bone_matrixes[bone_name] = bone.matrix
-    
-    bpy.ops.object.mode_set(mode='OBJECT')
-    bpy.context.scene.cursor.location = rootbone.head
-    bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
-    bpy.context.active_object.select_set(False)
-    
-    return armature_object
-    
+'''create/reset the armature'''
 def create_armature(bone_lengths, name):
     armature = bpy.data.armatures.new("Armature_"+name)
     armature_object = bpy.data.objects.new(name, armature)
@@ -203,42 +163,46 @@ def create_armature(bone_lengths, name):
     bpy.context.view_layer.objects.active = armature_object
     armature_object.select_set(True)
     bpy.ops.object.mode_set(mode='EDIT')
-    
     rootbone = armature.edit_bones.new('root')
     rootbone.head = (0, 0, 0)
-    rootbone.tail = rootbone.head + Vector([0, 0.001, 0])
+    rootbone.tail = rootbone.head + Vector([0, 0.01, 0])
     joint_parent_dict['root'] = rootbone
     canonical_joint_locations['root'] = rootbone.head
-    
     joint_orientations = dict(zip(JOINT_NAMES, JOINT_DEFAULT_ORIENTATION))
-    
     for parent, children in CHILDREN_TABLE.items():
         for child in children:
             bone_name = BONE_NAMES[(parent, child)]
             bone_length_current = bone_lengths[JOINT_NAMES.index(child)]
             bone = armature.edit_bones.new(bone_name)
-            
-            child_joint_location = canonical_joint_locations[parent] + ROT_TO_BLENDER @ Vector(joint_orientations[child]) * bone_length_current
-            
+            child_joint_location = canonical_joint_locations[parent] + Vector(joint_orientations[child]) * bone_length_current
             bone.head = tuple(canonical_joint_locations[parent])    
             bone.tail = child_joint_location
-            
             bone.parent = joint_parent_dict[parent]
-            
             canonical_joint_locations[child] = child_joint_location
             joint_parent_dict[child] = bone
             canonical_bone_matrixes[bone_name] = bone.matrix
-    
     bpy.ops.object.mode_set(mode='OBJECT')
     bpy.context.scene.cursor.location = rootbone.head
     bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
     bpy.context.active_object.select_set(False)
-    
     return armature_object
     
+def reset_bones(armature):
+    for parent, children in CHILDREN_TABLE.items():
+        for child in children: 
+            bone_name = BONE_NAMES[(parent, child)]
+            armature.pose.bones[bone_name].matrix = canonical_bone_matrixes[bone_name]
+            bpy.context.view_layer.update()
 
 
-
+'''inverse kinematics
+- Here we only rotate the bone to fit the joint locations.
+- the bone roll is not constrained.
+- the armature root is at the pelvis
+'''
+def get_current_joint_location(armature, joint_name, parent_joint):
+    bone_name = BONE_NAMES[(parent_joint, joint_name)]
+    return Vector(armature.pose.bones[bone_name].tail)
 
 def create_animation_inverse_kinematics(armature, motiondata, duration=100):
     scene = bpy.data.scenes['Scene']
@@ -280,19 +244,11 @@ def create_animation_inverse_kinematics(armature, motiondata, duration=100):
             bone.keyframe_insert('rotation_quaternion', frame=frame)
            
             
-    
-def reset_bones(armature):
-    for parent, children in CHILDREN_TABLE.items():
-            for child in children: 
-                 bone_name = BONE_NAMES[(parent, child)]
-                 armature.pose.bones[bone_name].matrix = canonical_bone_matrixes[bone_name]
-                 bpy.context.view_layer.update()
-                
-def get_current_joint_location(armature, joint_name, parent_joint):
-    bone_name = BONE_NAMES[(parent_joint, joint_name)]
-    return Vector(armature.pose.bones[bone_name].tail)
-    
-
+'''forward kinematics
+- all bone transforms are constrained.
+- the armature root is still in the world coordinate, to this end
+- the FK result does not precisely aign with the IK result, but very close.
+'''
 def numpy2Matrix(src):
     '''
     src: 3x3 matrix
@@ -301,108 +257,57 @@ def numpy2Matrix(src):
     return mat
 
 
-
-
-def create_animation_forward_kinematics(armature, motiondata, duration=100):
+def create_animation_forward_kinematics(armature, motiondata, duration=60):
     
     scene = bpy.data.scenes['Scene']
     scene.render.fps = FPS_TARGET
     joint_rot_data = motiondata['J_rotmat']
+    joint_loc_data = motiondata['J_locs']
     scene.frame_end = 10+len(joint_rot_data)
 
     for frame in range(min(len(joint_rot_data), duration)):
         scene.frame_set(frame)
-        reset_bones(armature)
-        
         joint_rotmats = joint_rot_data[frame]
-        
-        armature.location = Vector(motiondata['J_locs'][frame,  0])
-        armature.rotation_mode = 'QUATERNION'
-        armature.rotation_quaternion = (numpy2Matrix(joint_rotmats[0]).to_4x4()).to_quaternion()
+        joint_locs = joint_loc_data[frame]
+        # armature.location = Vector(motiondata['J_locs'][frame,  0])
+        # armature.rotation_mode = 'QUATERNION'
+        # armature.rotation_quaternion = (numpy2Matrix(joint_rotmats[0]).to_4x4()).to_quaternion()
+        # armature.select_set(True)
+        # bpy.ops.object.mode_set(mode='POSE')
+
         for parent, children in CHILDREN_TABLE.items():
-            for child in children:
-                bone_name = BONE_NAMES[(parent, child)]
-                
-                parent_joint_index = JOINT_NAMES.index(parent)
-                child_joint_index = JOINT_NAMES.index(child)
-                
-                parent_rot = numpy2Matrix(joint_rotmats[parent_joint_index])
-
-                child_rot = numpy2Matrix(joint_rotmats[child_joint_index])
-                
-                bone_rot =  child_rot.to_4x4() @ parent_rot.to_4x4().transposed()
-                # bone_rot =  parent_rot.to_4x4().transposed() @ child_rot.to_4x4()
-                head_location = armature.pose.bones[bone_name].head 
-                
-                M = (
-                Matrix.Translation(motiondata['J_locs'][frame,  parent_joint_index]) @
-                bone_rot.to_4x4() @
-                Matrix.Translation(-head_location)
-                ) 
-                armature.pose.bones[bone_name].matrix = M #@ armature.pose.bones[bone_name].matrix
-                
-                child_parent_bone_rot =   bone_rot
-
-        bpy.context.view_layer.update()
-                
-
-        
-        armature.keyframe_insert('location', frame=frame)
-        armature.keyframe_insert('rotation_quaternion', frame=frame)
-        bones = armature.pose.bones
-        for bone in bones:
-            bone.keyframe_insert('rotation_quaternion', frame=frame)
             
-#this is the direct comparable version of Yan's current visualization which applies transforms to all joints
-def create_animation_yup_forward_kinematics(armature, motiondata, duration=100):
-    scene = bpy.data.scenes['Scene']
-    scene.render.fps = FPS_TARGET
-    joint_rot_data = motiondata['J_rotmat']
-    scene.frame_end = 10+len(joint_rot_data)
-        
-    for frame in range(min(len(joint_rot_data), duration)):
-        scene.frame_set(frame)
-        reset_bones(armature)
-        joint_rotmats = joint_rot_data[frame]
-        
-        armature.location = Vector(motiondata['J_locs'][frame,  0])
-        armature.rotation_mode = 'QUATERNION'
-        armature.rotation_quaternion = (numpy2Matrix(joint_rotmats[0]).to_4x4()).to_quaternion()
-        for parent, children in CHILDREN_TABLE.items():
             for child in children:
                 bone_name = BONE_NAMES[(parent, child)]
-                
                 parent_joint_index = JOINT_NAMES.index(parent)
                 child_joint_index = JOINT_NAMES.index(child)
                 
-                parent_rot = numpy2Matrix(joint_rotmats[0])
-
-                child_rot = numpy2Matrix(joint_rotmats[child_joint_index])
+                ## canonical transform
+                transf1 = np.eye(4)
+                # transf1[:-1, :-1] = np.array(armature.pose.bones[bone_name].bone.matrix_local)[:-1,:-1]
+                transf1[:-1, :-1] = np.array(canonical_bone_matrixes[bone_name])[:-1,:-1]
                 
-                bone_rot =  child_rot.to_4x4() @ parent_rot.to_4x4().transposed()
-                # bone_rot = Matrix.Identity(4)
-                # bone_rot =  parent_rot.to_4x4().transposed() @ child_rot.to_4x4()
-                head_location = armature.pose.bones[bone_name].head 
-                print(head_location)
+                ## transform w.r.t. the armature obj coordinate
+                transf = np.eye(4)
+                transf[:-1,:-1] = joint_rotmats[child_joint_index]
+                transf[:-1, -1] = joint_locs[parent_joint_index]
                 
                 M = (
-                # Matrix.Translation(motiondata['J_locs'][frame,  parent_joint_index]) @
-                bone_rot.to_4x4() @
-                Matrix.Translation(head_location)
+                Matrix(transf) @ 
+                Matrix(transf1)
                 ) 
-                armature.pose.bones[bone_name].matrix = M @ armature.pose.bones[bone_name].matrix
+                armature.pose.bones[bone_name].matrix = M #armature.pose.bones[bone_name].matrix
                 
-                child_parent_bone_rot =   bone_rot
-
-        bpy.context.view_layer.update()
+                ## refresh the context
+                bpy.context.view_layer.update()
                 
-
-        
         armature.keyframe_insert('location', frame=frame)
         armature.keyframe_insert('rotation_quaternion', frame=frame)
         bones = armature.pose.bones
         for bone in bones:
             bone.keyframe_insert('rotation_quaternion', frame=frame)
+            bone.keyframe_insert('location', frame=frame)
+
     
 
 if __name__ == '__main__':
@@ -411,18 +316,13 @@ if __name__ == '__main__':
         with open(INPUT_FILE_PATH, "rb") as f:
             motiondata = pickle.load(f, encoding="latin1")
             
-        
-        # motiondata['J_rotmat'] = np.expand_dims(motiondata['J_rotmat'], axis=1)
-        # motiondata['J_locs'] = np.expand_dims(motiondata['J_locs'], axis=1)
-        # motiondata['J_shape'] = np.expand_dims(motiondata['J_shape'], axis=0)
-        
-        
-        armature = create_yup_armature(motiondata['J_shape'], "forward_kinematics_body")
-        create_animation_yup_forward_kinematics(armature, motiondata)
-        
-        armature2 = create_armature(motiondata['J_shape'], "inverse_kinematics_body")
-        create_animation_inverse_kinematics(armature2, motiondata)
+        duration=100
+        armature1 = create_armature(motiondata['J_shape'], "forward_kinematics_body")
+        create_animation_forward_kinematics(armature1, motiondata, duration)
 
+        armature2 = create_armature(motiondata['J_shape'], "inverse_kinematics_body")
+        create_animation_inverse_kinematics(armature2, motiondata, duration)
+        
     else:
         print("Input file not found")
 
