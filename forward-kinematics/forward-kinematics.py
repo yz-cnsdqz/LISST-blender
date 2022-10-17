@@ -9,7 +9,7 @@ from mathutils import Vector, Matrix, Quaternion
 # Input pkl path
 # INPUT_FILE_PATH = "C:\\Users\\Lukas\\Projects\\lisst-motion-visualization\\input\\motion_0.pkl"
 #INPUT_FILE_PATH = "/home/yzhang/workspaces/LISST/results/src/LISST_SHAPER_v0/results/mocap_zju_2/results.pkl"
-INPUT_FILE_PATH = r"C:\Users\hshang\Downloads\results.pkl"
+INPUT_FILE_PATH = r"C:\Users\zhang\Downloads\results.pkl"
 # Animation properties
 FPS_TARGET = 30
 
@@ -301,7 +301,8 @@ def numpy2Matrix(src):
     return mat
 
 
-import pdb
+
+
 def create_animation_forward_kinematics(armature, motiondata, duration=100):
     
     scene = bpy.data.scenes['Scene']
