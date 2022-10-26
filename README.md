@@ -1,7 +1,8 @@
 # LISST motion visualization
 ### Retarget Update 26.10.2022
 
-_based on the add-on https://github.com/cgvirus/Simple-Retarget-Tool-Blender under GPL-3.0 license_
+_based on the add-on https://github.com/cgvirus/Simple-Retarget-Tool-Blender under GPL-3.0 license<br /> You are also welcome to use my more up-to-date FK folder with every step done https://polybox.ethz.ch/index.php/s/4byApEzNiQb9AiW_
+
 
 1. Install and activate the addon in blender through Edit->Preferences->Install... (any previous version of the addon should be removed first) (save preferances!)<br />
 ![alt text](/images/Install_Add_On.png)
