@@ -145,6 +145,13 @@ JOINT_DEFAULT_ORIENTATION = np.array([[ 0.0000e+00,  0.0000e+00,  0.0000e+00],
 [-7.0711e-01, -6.3488e-11,  7.0711e-01]])
 
 
+BDOY_MEAN_SHAPE = np.array([[0.0000, 0.1415, 0.3968, 0.4271, 0.1153, 0.0578, 0.1401, 0.4003, 0.4246,
+         0.1179, 0.0590, 0.1151, 0.1149, 0.1161, 0.0966, 0.0970, 0.0972, 0.1974,
+         0.2864, 0.1866, 0.0933, 0.0365, 0.0294, 0.0422, 0.1958, 0.2892, 0.1877,
+         0.0939, 0.0379, 0.0305, 0.0439]])
+
+
+
 '''global placeholders'''
 canonical_joint_locations = {}
 canonical_bone_matrixes = {}
@@ -154,6 +161,7 @@ relative_rotation_around_parent = {}
 ROT_Z_180 = Matrix.Rotation(math.radians(180), 4, 'Z')
 ROT_X_NEG90 = Matrix.Rotation(math.radians(-90), 4, 'X')
 ROT_TO_BLENDER = ROT_X_NEG90 @ ROT_Z_180
+
 
 '''create/reset the armature'''
 def create_armature(bone_lengths, name):
@@ -169,6 +177,7 @@ def create_armature(bone_lengths, name):
     joint_parent_dict['root'] = rootbone
     canonical_joint_locations['root'] = rootbone.head
     joint_orientations = dict(zip(JOINT_NAMES, JOINT_DEFAULT_ORIENTATION))
+
     for parent, children in CHILDREN_TABLE.items():
         for child in children:
             bone_name = BONE_NAMES[(parent, child)]
@@ -187,6 +196,8 @@ def create_armature(bone_lengths, name):
     bpy.context.active_object.select_set(False)
     return armature_object
     
+
+
 def reset_bones(armature):
     for parent, children in CHILDREN_TABLE.items():
         for child in children: 
@@ -311,19 +322,20 @@ def create_animation_forward_kinematics(armature, motiondata, duration=60):
     
 
 if __name__ == '__main__':
-    if os.path.exists(INPUT_FILE_PATH):
-        print("Importing animation")
-        with open(INPUT_FILE_PATH, "rb") as f:
-            motiondata = pickle.load(f, encoding="latin1")
+#    if os.path.exists(INPUT_FILE_PATH):
+#        print("Importing animation")
+#        with open(INPUT_FILE_PATH, "rb") as f:
+#            motiondata = pickle.load(f, encoding="latin1")
             
-        duration=100
-        armature1 = create_armature(motiondata['J_shape'], "forward_kinematics_body")
-        create_animation_forward_kinematics(armature1, motiondata, duration)
+        armature0 = create_armature(BDOY_MEAN_SHAPE[0], "forward_kinematics_body")
+        # duration=300
+        # armature1 = create_armature(motiondata['J_shape'], "forward_kinematics_body")
+        # create_animation_forward_kinematics(armature1, motiondata, duration)
 
-        armature2 = create_armature(motiondata['J_shape'], "inverse_kinematics_body")
-        create_animation_inverse_kinematics(armature2, motiondata, duration)
+        # armature2 = create_armature(motiondata['J_shape'], "inverse_kinematics_body")
+        # create_animation_inverse_kinematics(armature2, motiondata, duration)
         
-    else:
-        print("Input file not found")
+    # else:
+    #     print("Input file not found")
 
     
