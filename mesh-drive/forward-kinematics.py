@@ -8,9 +8,12 @@ from mathutils import Vector, Matrix, Quaternion
 
 # Input pkl path
 # INPUT_FILE_PATH = "C:\\Users\\Lukas\\Projects\\lisst-motion-visualization\\input\\motion_0.pkl"
-#INPUT_FILE_PATH = "/home/yzhang/workspaces/LISST/results/src/LISST_SHAPER_v0/results/mocap_zju_2/results.pkl"
-#INPUT_FILE_PATH = r"C:\Users\zhang\Downloads\results.pkl"
-INPUT_FILE_PATH = r"C:\Users\hshang\Downloads\results (2).pkl"
+# INPUT_FILE_PATH = "/home/yzhang/workspaces/LISST/results/src/LISST_SHAPER_v0/results/mocap_zju_2/results.pkl"
+# DURATION = 1
+
+# INPUT_FILE_PATH = "/home/yzhang/workspaces/LISST/results/src/LISST_SHAPER_v2/results/mocapgo_tmp2/results.pkl"
+# INPUT_FILE_PATH = r"C:\Users\zhang\Downloads\results.pkl"
+INPUT_FILE_PATH = r"C:\Users\hshang\Downloads\results.pkl"
 # Animation properties
 FPS_TARGET = 30
 
@@ -48,6 +51,42 @@ JOINT_NAMES = [
 'rfingers', 
 'rthumb'
 ]
+# CHILDREN_TABLE = {
+# 'root': ['lhipjoint', 'rhipjoint', 'lowerback'],
+#  'lhipjoint': ['lfemur'], 
+#  'lfemur': ['ltibia'], 
+#  'ltibia': ['lfoot'], 
+#  'lfoot': ['ltoes'],
+#  'ltoes': [], 
+#  'rhipjoint': ['rfemur'], 
+#  'rfemur': ['rtibia'], 
+#  'rtibia': ['rfoot'], 
+#  'rfoot': ['rtoes'], 
+#  'rtoes': [], 
+#  'lowerback': ['upperback'], 
+#  'upperback': ['thorax'], 
+#  'thorax': ['lowerneck', 'lclavicle', 'rclavicle'], 
+#  'lowerneck': ['upperneck'], 
+#  'upperneck': ['head'], 
+#  'head': [], 
+#  'lclavicle': ['lhumerus'], 
+#  'lhumerus': ['lradius'], 
+#  'lradius': ['lwrist'], 
+#  'lwrist': ['lhand', 'lthumb'], 
+#  'lhand': ['lfingers'], 
+#  'lfingers': [], 
+#  'lthumb': [], 
+#  'rclavicle': ['rhumerus'], 
+#  'rhumerus': ['rradius'], 
+#  'rradius': ['rwrist'], 
+#  'rwrist': ['rhand', 'rthumb'], 
+#  'rhand': ['rfingers'], 
+#  'rfingers': [], 
+#  'rthumb': []
+#  }
+
+
+
 CHILDREN_TABLE = {
 'root': ['lhipjoint', 'rhipjoint', 'lowerback'],
  'lhipjoint': ['lfemur'], 
@@ -81,6 +120,8 @@ CHILDREN_TABLE = {
  'rfingers': [], 
  'rthumb': []
  }
+
+
 BONE_NAMES = {
 ('root', 'lhipjoint'): 'left_hip', 
 ('root', 'rhipjoint'): 'right_hip', 
@@ -113,37 +154,40 @@ BONE_NAMES = {
 ('rwrist', 'rthumb'): 'right_thumb', 
 ('rhand', 'rfingers'): 'right_fingers'
 }
-JOINT_DEFAULT_ORIENTATION = np.array([[ 0.0000e+00,  0.0000e+00,  0.0000e+00],
-[ 6.2366e-01, -7.1724e-01,  3.1083e-01],
-[ 3.4202e-01, -9.3969e-01,  0.0000e+00],
-[ 3.4202e-01, -9.3969e-01,  0.0000e+00],
-[ 6.7389e-02, -1.8515e-01,  9.8040e-01],
-[ 1.5357e-11, -4.2199e-11,  1.0000e+00],
-[-4.8902e-01, -8.0035e-01,  3.4685e-01],
-[-3.4202e-01, -9.3969e-01,  0.0000e+00],
-[-3.4202e-01, -9.3969e-01,  0.0000e+00],
-[-8.5932e-02, -2.3610e-01,  9.6792e-01],
-[-1.5354e-11, -4.2199e-11,  1.0000e+00],
-[-7.6255e-03,  9.9898e-01, -4.4555e-02],
-[ 4.2236e-02,  9.9887e-01, -2.1916e-02],
-[ 4.4246e-02,  9.9902e-01,  7.4760e-05],
-[ 3.1217e-03,  9.8464e-01,  1.7456e-01],
-[-3.8303e-02,  9.8526e-01, -1.6675e-01],
-[-1.2955e-02,  9.9706e-01, -7.5539e-02],
-[ 9.1286e-01,  3.7052e-01, -1.7149e-01],
-[ 1.0000e+00, -4.4896e-11,  3.6436e-27],
-[ 1.0000e+00, -4.4897e-11,  5.9720e-27],
-[ 1.0000e+00, -4.4896e-11,  9.8329e-27],
-[ 1.0000e+00, -4.4902e-11,  1.9655e-26],
-[ 1.0000e+00, -4.4897e-11,  3.9328e-26],
-[ 7.0711e-01, -6.3493e-11,  7.0711e-01],
-[-9.0092e-01,  3.9536e-01, -1.7898e-01],
-[-1.0000e+00, -4.4897e-11,  1.0388e-27],
-[-1.0000e+00, -4.4895e-11,  5.0273e-27],
-[-1.0000e+00, -4.4901e-11,  9.8283e-27],
-[-1.0000e+00, -4.4889e-11,  1.9677e-26],
-[-1.0000e+00, -4.4909e-11,  3.9283e-26],
-[-7.0711e-01, -6.3488e-11,  7.0711e-01]])
+
+
+JOINT_DEFAULT_ORIENTATION = np.array([
+    [ 0.0000e+00,  0.0000e+00,  0.0000e+00],
+    [ 6.2366e-01, -7.1724e-01,  3.1083e-01],
+    [ 3.4202e-01, -9.3969e-01,  0.0000e+00],
+    [ 3.4202e-01, -9.3969e-01,  0.0000e+00],
+    [ 6.7389e-02, -1.8515e-01,  9.8040e-01],
+    [ 1.5357e-11, -4.2199e-11,  1.0000e+00],
+    [-4.8902e-01, -8.0035e-01,  3.4685e-01],
+    [-3.4202e-01, -9.3969e-01,  0.0000e+00],
+    [-3.4202e-01, -9.3969e-01,  0.0000e+00],
+    [-8.5932e-02, -2.3610e-01,  9.6792e-01],
+    [-1.5354e-11, -4.2199e-11,  1.0000e+00],
+    [-7.6255e-03,  9.9898e-01, -4.4555e-02],
+    [ 4.2236e-02,  9.9887e-01, -2.1916e-02],
+    [ 4.4246e-02,  9.9902e-01,  7.4760e-05],
+    [ 3.1217e-03,  9.8464e-01,  1.7456e-01],
+    [-3.8303e-02,  9.8526e-01, -1.6675e-01],
+    [-1.2955e-02,  9.9706e-01, -7.5539e-02],
+    [ 9.1286e-01,  3.7052e-01, -1.7149e-01],
+    [ 1.0000e+00, -4.4896e-11,  3.6436e-27],
+    [ 1.0000e+00, -4.4897e-11,  5.9720e-27],
+    [ 1.0000e+00, -4.4896e-11,  9.8329e-27],
+    [ 1.0000e+00, -4.4902e-11,  1.9655e-26],
+    [ 1.0000e+00, -4.4897e-11,  3.9328e-26],
+    [ 7.0711e-01, -6.3493e-11,  7.0711e-01],
+    [-9.0092e-01,  3.9536e-01, -1.7898e-01],
+    [-1.0000e+00, -4.4897e-11,  1.0388e-27],
+    [-1.0000e+00, -4.4895e-11,  5.0273e-27],
+    [-1.0000e+00, -4.4901e-11,  9.8283e-27],
+    [-1.0000e+00, -4.4889e-11,  1.9677e-26],
+    [-1.0000e+00, -4.4909e-11,  3.9283e-26],
+    [-7.0711e-01, -6.3488e-11,  7.0711e-01]])
 
 
 '''global placeholders'''
@@ -156,6 +200,7 @@ ROT_Z_180 = Matrix.Rotation(math.radians(180), 4, 'Z')
 ROT_X_NEG90 = Matrix.Rotation(math.radians(-90), 4, 'X')
 ROT_TO_BLENDER = ROT_X_NEG90 @ ROT_Z_180
 
+
 '''create/reset the armature'''
 def create_armature(bone_lengths, name):
     armature = bpy.data.armatures.new("Armature_"+name)
@@ -164,11 +209,11 @@ def create_armature(bone_lengths, name):
     bpy.context.view_layer.objects.active = armature_object
     armature_object.select_set(True)
     bpy.ops.object.mode_set(mode='EDIT')
-    rootbone = armature.edit_bones.new('root')
-    rootbone.head = (0, 0, 0)
-    rootbone.tail = rootbone.head + Vector([0, 0.01, 0])
-    joint_parent_dict['root'] = rootbone
-    canonical_joint_locations['root'] = rootbone.head
+    # rootbone = armature.edit_bones.new('root')
+    # rootbone.head = (0, 0, 0)
+    # rootbone.tail = rootbone.head + Vector([0, 0.01, 0])
+    joint_parent_dict['root'] = None
+    canonical_joint_locations['root'] = Vector([0, 0, 0])
     joint_orientations = dict(zip(JOINT_NAMES, JOINT_DEFAULT_ORIENTATION))
     for parent, children in CHILDREN_TABLE.items():
         for child in children:
@@ -183,7 +228,7 @@ def create_armature(bone_lengths, name):
             joint_parent_dict[child] = bone
             canonical_bone_matrixes[bone_name] = bone.matrix
     bpy.ops.object.mode_set(mode='OBJECT')
-    bpy.context.scene.cursor.location = rootbone.head
+    bpy.context.scene.cursor.location = canonical_joint_locations['root']
     bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
     bpy.context.active_object.select_set(False)
     return armature_object
@@ -221,7 +266,6 @@ def create_animation_inverse_kinematics(armature, motiondata, duration=100):
                 child_current = get_current_joint_location(armature, child, parent)
                 child_target = Vector(joint_loc_data[frame,  JOINT_NAMES.index(child)] - motiondata['J_locs'][frame,  0])
                 
-                
                 parent_current = Vector(joint_loc_data[frame,  JOINT_NAMES.index(parent)] - motiondata['J_locs'][frame,  0])
                 link_current = child_current - parent_current
                 link_target = child_target - parent_current
@@ -256,6 +300,26 @@ def numpy2Matrix(src):
     '''
     mat = Matrix([src[0], src[1], src[2]])
     return mat
+#perform rescaling in pose mode
+def rescale_bones(mesh_armature, data_armature):
+    
+    #no hands, fingers, toes
+    AFFECTED_BONES = ['left_hip', 'right_hip', 'left_knee', 'left_ankle', 'left_foot', 'right_knee', 'right_ankle', 'right_foot', 'spine2', 'spine3', 'neck', 
+        'left_collar', 'right_collar', 'head1', 'head2', 'left_shoulder', 'left_elbow', 'left_wrist', 
+        'right_shoulder', 'right_elbow', 'right_wrist', ]
+        #clear inherit scale
+    for bone in mesh_armature.data.bones:
+        if bone.name in AFFECTED_BONES:
+            bone.inherit_scale = 'NONE'
+        else: continue
+    #rescale
+    for mesh_bone in mesh_armature.pose.bones:
+        if mesh_bone.name in AFFECTED_BONES:
+            data_bone = data_armature.pose.bones[mesh_bone.name]
+            scale = data_bone.length / mesh_bone.length * 100
+            mesh_bone.scale = Vector((scale,scale,scale))
+        else: continue
+
 
 
 def create_animation_forward_kinematics(armature, motiondata, duration=60):
@@ -280,15 +344,15 @@ def create_animation_forward_kinematics(armature, motiondata, duration=60):
             
             for child in children:
                 bone_name = BONE_NAMES[(parent, child)]
-                if bone_name in ['left_thumb', 'right_thumb', 'left_fingers', 'right_fingers', 'left_hand', 'right_hand']:
+                if bone_name in ['left_thumb', 'right_thumb', 'left_fingers', 'right_fingers', 'left_hand', 'right_hand', 'right_toes', 'left_toes']:
                     continue
                 parent_joint_index = JOINT_NAMES.index(parent)
                 child_joint_index = JOINT_NAMES.index(child)
                 
                 ## canonical transform
                 transf1 = np.eye(4)
-                # transf1[:-1, :-1] = np.array(armature.pose.bones[bone_name].bone.matrix_local)[:-1,:-1]
-                transf1[:-1, :-1] = np.array(canonical_bone_matrixes[bone_name])[:-1,:-1]
+                transf1[:-1, :-1] = np.array(armature.pose.bones[bone_name].bone.matrix_local)[:-1,:-1]
+                #transf1[:-1, :-1] = np.array(canonical_bone_matrixes[bone_name])[:-1,:-1]
                 
                 ## transform w.r.t. the armature obj coordinate
                 transf = np.eye(4)
@@ -303,18 +367,16 @@ def create_animation_forward_kinematics(armature, motiondata, duration=60):
                 
                 ## refresh the context
                 bpy.context.view_layer.update()
-            
-        #armature.pose.bones['root'].location = armature.pose.bones['left_hip'].head.xyz 
+                
         armature.keyframe_insert('location', frame=frame)
         armature.keyframe_insert('rotation_quaternion', frame=frame)
         bones = armature.pose.bones
         for bone in bones:
-            if bone in ['left_thumb', 'right_thumb', 'left_fingers', 'right_fingers', 'left_hand', 'right_hand']:
+            if bone in ['left_thumb', 'right_thumb', 'left_fingers', 'right_fingers', 'left_hand', 'right_hand', 'right_toes', 'left_toes']:
                 continue
             bone.keyframe_insert('rotation_quaternion', frame=frame)
             bone.keyframe_insert('location', frame=frame)
 
-    
 
 if __name__ == '__main__':
     if os.path.exists(INPUT_FILE_PATH):
@@ -322,16 +384,17 @@ if __name__ == '__main__':
         with open(INPUT_FILE_PATH, "rb") as f:
             motiondata = pickle.load(f, encoding="latin1")
             
-        duration=300
-        
+        duration=100
         armature1 = create_armature(motiondata['J_shape'], "forward_kinematics_body")
-        create_animation_forward_kinematics(armature1, motiondata, duration)
-    
-        armature1 = bpy.data.objects['Armature.001']
-        create_animation_forward_kinematics(armature1, motiondata, duration)
-        # armature2 = create_armature(motiondata['J_shape'], "inverse_kinematics_body")
+        #create_animation_forward_kinematics(armature1, motiondata, duration)
         
-        #create_animation_inverse_kinematics(armature2, motiondata, duration)
+        armature2 = bpy.data.objects['Armature.001']
+        bpy.ops.object.mode_set(mode='POSE')
+        rescale_bones(armature2, armature1)
+        #create_animation_forward_kinematics(armature2, motiondata, duration)
+
+        # armature2 = create_armature(motiondata['J_shape'], "inverse_kinematics_body")
+        # create_animation_inverse_kinematics(armature2, motiondata, duration)
         
     else:
         print("Input file not found")
