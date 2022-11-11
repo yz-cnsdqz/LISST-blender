@@ -200,7 +200,6 @@ ROT_Z_180 = Matrix.Rotation(math.radians(180), 4, 'Z')
 ROT_X_NEG90 = Matrix.Rotation(math.radians(-90), 4, 'X')
 ROT_TO_BLENDER = ROT_X_NEG90 @ ROT_Z_180
 
-
 '''create/reset the armature'''
 def create_armature(bone_lengths, name):
     armature = bpy.data.armatures.new("Armature_"+name)
@@ -208,30 +207,96 @@ def create_armature(bone_lengths, name):
     bpy.context.scene.collection.objects.link(armature_object)
     bpy.context.view_layer.objects.active = armature_object
     armature_object.select_set(True)
+    joint_orientations = dict(zip(JOINT_NAMES, JOINT_DEFAULT_ORIENTATION))
     bpy.ops.object.mode_set(mode='EDIT')
+
+    '''special hierarchy at the root.
+        The bone "spine1" is regarded as the root. We hardcode this case.
+    '''
+    rootbonename = 'spine1'
+    rootchildjoint = 'lowerback'
+    rootbone = armature.edit_bones.new(rootbonename)
+    child_joint_location = Vector(joint_orientations[rootchildjoint]) * bone_lengths[JOINT_NAMES.index(rootchildjoint)]
+    rootbone.head = Vector([0, 0, 0])
+    rootbone.tail = child_joint_location
+    rootbone.parent = None
+    canonical_joint_locations[rootchildjoint] = child_joint_location
+    joint_parent_dict[rootchildjoint] = rootbone
+    canonical_bone_matrixes[rootbonename] = rootbone.matrix
+    
     # rootbone = armature.edit_bones.new('root')
     # rootbone.head = (0, 0, 0)
     # rootbone.tail = rootbone.head + Vector([0, 0.01, 0])
-    joint_parent_dict['root'] = None
-    canonical_joint_locations['root'] = Vector([0, 0, 0])
-    joint_orientations = dict(zip(JOINT_NAMES, JOINT_DEFAULT_ORIENTATION))
+    # joint_parent_dict['root'] = None
+    # canonical_joint_locations['root'] = Vector([0, 0, 0])
+    
+
     for parent, children in CHILDREN_TABLE.items():
-        for child in children:
-            bone_name = BONE_NAMES[(parent, child)]
-            bone_length_current = bone_lengths[JOINT_NAMES.index(child)]
-            bone = armature.edit_bones.new(bone_name)
-            child_joint_location = canonical_joint_locations[parent] + Vector(joint_orientations[child]) * bone_length_current
-            bone.head = tuple(canonical_joint_locations[parent])    
-            bone.tail = child_joint_location
-            bone.parent = joint_parent_dict[parent]
-            canonical_joint_locations[child] = child_joint_location
-            joint_parent_dict[child] = bone
-            canonical_bone_matrixes[bone_name] = bone.matrix
+
+        if parent=='root':
+            for child in children:
+                if child == 'lowerback':
+                    continue
+                else:
+                    bone_name = BONE_NAMES[(parent, child)]
+                    bone_length_current = bone_lengths[JOINT_NAMES.index(child)]
+                    bone = armature.edit_bones.new(bone_name)
+                    child_joint_location = Vector(joint_orientations[child]) * bone_length_current
+                    bone.head = Vector([0, 0, 0])
+                    bone.tail = child_joint_location
+                    bone.parent = rootbone
+                    canonical_joint_locations[child] = child_joint_location
+                    joint_parent_dict[child] = bone
+                    canonical_bone_matrixes[bone_name] = bone.matrix
+        else:
+            for child in children:
+                bone_name = BONE_NAMES[(parent, child)]
+                bone_length_current = bone_lengths[JOINT_NAMES.index(child)]
+                bone = armature.edit_bones.new(bone_name)
+                child_joint_location = canonical_joint_locations[parent] + Vector(joint_orientations[child]) * bone_length_current
+                bone.head = tuple(canonical_joint_locations[parent])    
+                bone.tail = child_joint_location
+                bone.parent = joint_parent_dict[parent]
+                canonical_joint_locations[child] = child_joint_location
+                joint_parent_dict[child] = bone
+                canonical_bone_matrixes[bone_name] = bone.matrix
     bpy.ops.object.mode_set(mode='OBJECT')
-    bpy.context.scene.cursor.location = canonical_joint_locations['root']
+    bpy.context.scene.cursor.location = Vector([0,0,0])
     bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
     bpy.context.active_object.select_set(False)
     return armature_object
+
+# '''create/reset the armature'''
+# def create_armature(bone_lengths, name):
+#     armature = bpy.data.armatures.new("Armature_"+name)
+#     armature_object = bpy.data.objects.new(name, armature)
+#     bpy.context.scene.collection.objects.link(armature_object)
+#     bpy.context.view_layer.objects.active = armature_object
+#     armature_object.select_set(True)
+#     bpy.ops.object.mode_set(mode='EDIT')
+#     # rootbone = armature.edit_bones.new('root')
+#     # rootbone.head = (0, 0, 0)
+#     # rootbone.tail = rootbone.head + Vector([0, 0.01, 0])
+#     joint_parent_dict['root'] = None
+#     canonical_joint_locations['root'] = Vector([0, 0, 0])
+#     joint_orientations = dict(zip(JOINT_NAMES, JOINT_DEFAULT_ORIENTATION))
+#     for parent, children in CHILDREN_TABLE.items():
+#         for child in children:
+#             bone_name = BONE_NAMES[(parent, child)]
+#             bone_length_current = bone_lengths[JOINT_NAMES.index(child)]
+#             bone = armature.edit_bones.new(bone_name)
+#             child_joint_location = canonical_joint_locations[parent] + Vector(joint_orientations[child]) * bone_length_current
+#             bone.head = tuple(canonical_joint_locations[parent])    
+#             bone.tail = child_joint_location
+#             bone.parent = joint_parent_dict[parent]
+#             canonical_joint_locations[child] = child_joint_location
+#             joint_parent_dict[child] = bone
+#             canonical_bone_matrixes[bone_name] = bone.matrix
+#     bpy.ops.object.mode_set(mode='OBJECT')
+#     bpy.context.scene.cursor.location = canonical_joint_locations['root']
+#     bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
+#     bpy.context.active_object.select_set(False)
+#     return armature_object
     
 def reset_bones(armature):
     for parent, children in CHILDREN_TABLE.items():
@@ -376,6 +441,7 @@ def create_animation_forward_kinematics(armature, motiondata, duration=60):
                 continue
             bone.keyframe_insert('rotation_quaternion', frame=frame)
             bone.keyframe_insert('location', frame=frame)
+            bone.keyframe_insert('scale', frame=frame)
 
 
 if __name__ == '__main__':
