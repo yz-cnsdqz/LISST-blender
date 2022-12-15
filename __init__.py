@@ -519,6 +519,7 @@ class LISSTAddAnimation(bpy.types.Operator, ImportHelper):
         armature.select_set( state = True, view_layer = bpy.context.view_layer)
         bpy.context.view_layer.objects.active = armature
         bpy.ops.object.rotation_clear()
+        bpy.ops.transform.rotate(value = 180)
         bpy.ops.object.transform_apply()
         create_animation_forward_kinematics(armature, motiondata, duration, self.target_framerate)
 
