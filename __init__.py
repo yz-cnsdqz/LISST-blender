@@ -395,7 +395,7 @@ class LISSTAddMesh(bpy.types.Operator):
 
         # import the fbx file of the LISST base mesh, which has the mean shape skeleton
         model_file = os.path.join(path, "data", "LISST_canonical_mesh.fbx")
-        bpy.ops.import_scene.fbx(filepath=model_file)
+        bpy.ops.import_scene.fbx(filepath=model_file, force_connect_children=True, use_anim=False)
         
         # Select imported armature
         object_name = context.selected_objects[0].name
@@ -495,7 +495,7 @@ class LISSTAddAnimation(bpy.types.Operator, ImportHelper):
         with open(self.filepath, "rb") as f:
             motiondata = pickle.load(f, encoding="latin1")
         
-        if ("r_locs" not in motiondata) or ("J_shape" not in motiondata) or ("J_locs_3d" not in motiondata)or ("J_rotmat" not in motiondata):
+        if ("r_locs" not in motiondata) or ("bone_length" not in motiondata) or ("J_locs_3d" not in motiondata)or ("J_rotmat" not in motiondata):
                 self.report({"ERROR"}, "Invalid LISST motion data file, one/more motion data key(s) missing")
                 return {"CANCELLED"}
         duration = motiondata['r_locs'].shape[0]    
@@ -510,10 +510,16 @@ class LISSTAddAnimation(bpy.types.Operator, ImportHelper):
             obj = bpy.context.object.children[0]
         else:
             armature = obj.parent
+       
 
         # re-scale the bone length
         rescale_bones(motiondata['J_shape'], armature)
         set_rest_pose(armature)
+        bpy.ops.object.mode_set(mode='OBJECT')
+        armature.select_set( state = True, view_layer = bpy.context.view_layer)
+        bpy.context.view_layer.objects.active = armature
+        bpy.ops.object.rotation_clear()
+        bpy.ops.object.transform_apply()
         create_animation_forward_kinematics(armature, motiondata, duration, self.target_framerate)
 
         return {'FINISHED'}

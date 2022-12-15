@@ -34,14 +34,6 @@ if __name__ == '__main__':
         set_rest_pose(armature3)
         
 
-        """demo4: create armature and create ik animation
-        """
-        # armature4 = create_armature(motiondata['J_shape'], "inverse_kinematics_body")
-        # create_animation_inverse_kinematics(armature4, motiondata, duration)
-        
-        """demo5: (does not work currently) fix sliding
-        """
-        # armature5 = bpy.data.objects['Armature.001']
-        # fix_sliding(armature5, n = 0.245)
+       
     else:
         print("Input file not found")

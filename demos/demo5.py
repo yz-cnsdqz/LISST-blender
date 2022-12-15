@@ -2,9 +2,13 @@ import sys
 import os
 import pickle
 import bpy
+<<<<<<< Updated upstream
 #sys.path.append(".")
 sys.path.append("C:\LISST-blender")
 sys.path.append("C:\LISST-blender\mesh_drive")
+=======
+sys.path.append(".")
+>>>>>>> Stashed changes
 INPUT_FILE_PATH = r"C:\Users\hshang\Downloads\results.pkl"
 
 # from mesh_drive.forward_kinematics import rescale_bones

@@ -2,15 +2,24 @@ import sys
 import os
 import pickle
 import bpy
+<<<<<<< Updated upstream
 #sys.path.append(".")
 sys.path.append("C:\LISST-blender")
 sys.path.append("C:\LISST-blender\mesh_drive")
+=======
+sys.path.append(".")
+>>>>>>> Stashed changes
 INPUT_FILE_PATH = r"C:\Users\hshang\Downloads\results.pkl"
 
 # from mesh_drive.forward_kinematics import rescale_bones
 # from mesh_drive.forward_kinematics import create_animation_forward_kinematics
+<<<<<<< Updated upstream
 # from mesh_drive.forward_kinematics import set_rest_pose
 # from mesh_drive.forward_kinematics import change_mixamo_rest_pose
+=======
+from mesh_drive.forward_kinematics import set_rest_pose
+from mesh_drive.forward_kinematics import change_mixamo_rest_pose
+>>>>>>> Stashed changes
 from mesh_drive.forward_kinematics import create_armature
 from mesh_drive.forward_kinematics import create_animation_inverse_kinematics
 from mesh_drive.forward_kinematics import JOINT_NAMES
@@ -36,9 +45,6 @@ if __name__ == '__main__':
         armature4 = create_armature(motiondata['J_shape'], "inverse_kinematics_body")
         create_animation_inverse_kinematics(armature4, motiondata, duration)
         
-        """demo5: (does not work currently) fix sliding
-        """
-        # armature5 = bpy.data.objects['Armature.001']
-        # fix_sliding(armature5, n = 0.245)
+        
     else:
         print("Input file not found")
