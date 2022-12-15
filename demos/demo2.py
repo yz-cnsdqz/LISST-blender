@@ -2,8 +2,10 @@ import sys
 import os
 import pickle
 import bpy
-sys.path.append(".")
-INPUT_FILE_PATH = INPUT_FILE_PATH = r"C:\Users\hshang\Downloads\results.pkl"
+#sys.path.append(".")
+sys.path.append("C:\LISST-blender")
+sys.path.append("C:\LISST-blender\mesh_drive")
+INPUT_FILE_PATH = r"C:\Users\hshang\Downloads\results.pkl"
 
 from mesh_drive.forward_kinematics import rescale_bones
 from mesh_drive.forward_kinematics import create_animation_forward_kinematics

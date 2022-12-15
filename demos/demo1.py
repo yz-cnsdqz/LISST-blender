@@ -3,6 +3,7 @@ import os
 import pickle
 #sys.path.append(".")
 sys.path.append("C:\LISST-blender")
+sys.path.append("C:\LISST-blender\mesh_drive")
 
 INPUT_FILE_PATH = r"C:\Users\hshang\Downloads\results.pkl"
 

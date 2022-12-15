@@ -462,7 +462,7 @@ class LISSTResetShape(bpy.types.Operator):
 class LISSTAddAnimation(bpy.types.Operator, ImportHelper):
     bl_idname = "object.lisst_add_animation"
     bl_label = "Add Animation"
-    bl_description = ("Load LISST motion file and create animated SMPL-X body")
+    bl_description = ("Load LISST motion file and create animated LISST body")
     bl_options = {'REGISTER', 'UNDO'}
 
     filter_glob: StringProperty(
@@ -495,8 +495,8 @@ class LISSTAddAnimation(bpy.types.Operator, ImportHelper):
         with open(self.filepath, "rb") as f:
             motiondata = pickle.load(f, encoding="latin1")
         
-        if ("r_locs" not in motiondata) or ("bone_length" not in motiondata) or ("J_rotmat" not in motiondata):
-                self.report({"ERROR"}, "Invalid LISST motion data file")
+        if ("r_locs" not in motiondata) or ("J_shape" not in motiondata) or ("J_locs_3d" not in motiondata)or ("J_rotmat" not in motiondata):
+                self.report({"ERROR"}, "Invalid LISST motion data file, one/more motion data key(s) missing")
                 return {"CANCELLED"}
         duration = motiondata['r_locs'].shape[0]    
         
