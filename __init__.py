@@ -231,11 +231,147 @@ def rescale_bones(bone_lengths, mesh_armature):
 
 
 
+def set_rest_pose(armature):
+    """set the current pose of the armature as the rest pose
+    **** from the addon "simple retarget tool" ****
+
+    Args:
+        armature (bpy_types.Object): the target armature
+    """
+
+    bpy.ops.object.mode_set(mode='POSE')
+    def apply_armature():
+
+        for mod in bpy.context.object.modifiers:
+
+            if mod.type == 'ARMATURE':
+                bpy.ops.object.select_all(action='DESELECT')
+                mod_name = mod.name
+                bpy.ops.object.modifier_copy(modifier=mod_name)
+                bpy.ops.object.modifier_apply(modifier=mod_name)
+                bpy.context.object.modifiers.active.name = mod_name
+
+    bpy.context.view_layer.objects.active = armature
+
+    for obj in bpy.data.objects:
+
+        if (obj.type == 'MESH'
+            ):
+                
+                objectToSelect = bpy.data.objects[obj.name]
+                objectToSelect.select_set(True)    
+                bpy.context.view_layer.objects.active = objectToSelect
+                sourceobj = objectToSelect
+                
+                if sourceobj.data.shape_keys is None:
+
+                    apply_armature()
+
+                else:
+
+                    bpy.ops.object.duplicate(linked=False)
+                    duplicateobj = bpy.context.view_layer.objects.active
+                    duplicateobj.name="dups"
+                    sourceobj.shape_key_clear()
+                    bpy.context.view_layer.objects.active = sourceobj
+                    
+                    
+                    apply_armature()
+                    
+                    duplicateobj.select_set(True)        
+                    
+                    for idx in range(1, len(duplicateobj.data.shape_keys.key_blocks)):
+                        duplicateobj.active_shape_key_index = idx
+                        print("Copying Shape Key - ", duplicateobj.active_shape_key.name)
+                        bpy.ops.object.shape_key_transfer()
+                    
+                    sourceobj.show_only_shape_key = False
+                    bpy.data.objects.remove(duplicateobj, do_unlink=True)
+                
+                
+                        
+    bpy.context.view_layer.objects.active = armature
+    bpy.ops.pose.armature_apply(selected=False)
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+
+
+
+def create_animation_forward_kinematics(armature, motiondata, duration=60, framerate=30):
+    """create the animation using fk
+
+    Args:
+        armature (bpy_types.Object): the target armature
+        motiondata (dict): the motion data, pickle load from the result.pkl file
+        duration (int, optional): duration of the animation. Defaults to 60.
+    """
+    
+    scene = bpy.data.scenes['Scene']
+    scene.render.fps = framerate
+    joint_rot_data = motiondata['J_rotmat']
+    joint_loc_data = motiondata['J_locs_3d']
+    scene.frame_start = 0
+    scene.frame_end = 10+min(len(joint_rot_data), duration)
+
+    for frame in range(min(len(joint_rot_data), duration)):
+        scene.frame_set(frame)
+        joint_rotmats = joint_rot_data[frame]
+        joint_locs = joint_loc_data[frame]
+       
+        #set rootbone loc
+        rootbone = armature.pose.bones['root']
+        rootloc = np.eye(4) 
+        #last row and last col = loc
+        rootloc[:-1, -1] = joint_locs[0]
+        rootbone.matrix = Matrix(rootloc)
+        bpy.context.view_layer.update()
+
+        for parent, children in CHILDREN_TABLE.items():
+            
+            for child in children:
+                bone_name = BONE_NAMES[(parent, child)]
+                if bone_name in ['left_thumb', 'right_thumb', 'left_fingers', 'right_fingers', 'left_hand', 'right_hand', 'right_toes', 'left_toes']:
+                    continue
+                parent_joint_index = JOINT_NAMES.index(parent)
+                child_joint_index = JOINT_NAMES.index(child)
+                
+                ## canonical transform
+                transf1 = np.eye(4)
+                transf1[:-1, :-1] = np.array(armature.pose.bones[bone_name].bone.matrix_local)[:-1,:-1]
+                
+                ## transform w.r.t. the armature obj coordinate
+                transf = np.eye(4)
+                transf[:-1,:-1] = joint_rotmats[child_joint_index]
+                
+                if bone_name in ['left_hip', 'right_hip']:
+                    transf[:-1, -1] = joint_locs[0]
+                else:
+                    transf[:-1, -1] = joint_locs[parent_joint_index]
+                M = (
+                Matrix(transf) @ 
+                Matrix(transf1)
+                ) 
+                armature.pose.bones[bone_name].matrix = M #armature.pose.bones[bone_name].matrix
+                
+                ##refresh the context
+                bpy.context.view_layer.update()
+                
+        armature.keyframe_insert('location', frame=frame)
+        armature.keyframe_insert('rotation_quaternion', frame=frame)
+        bones = armature.pose.bones
+        for bone in bones:
+            if bone in ['left_thumb', 'right_thumb', 'left_fingers', 'right_fingers', 'left_hand', 'right_hand', 'right_toes', 'left_toes']:
+                continue
+            bone.keyframe_insert('rotation_quaternion', frame=frame)
+            bone.keyframe_insert('location', frame=frame)
+            bone.keyframe_insert('scale', frame=frame)
+
+
+
+
 
 
 ###############################################################################
-
-
 
 class LISSTAddMesh(bpy.types.Operator):
     bl_idname = "scene.lisst_add_mesh"
@@ -270,7 +406,6 @@ class LISSTAddMesh(bpy.types.Operator):
         return {'FINISHED'}
 
 
-
 class LISSTRandomShape(bpy.types.Operator):
     bl_idname = "object.lisst_random_shape"
     bl_label = "Random"
@@ -300,8 +435,6 @@ class LISSTRandomShape(bpy.types.Operator):
         return {'FINISHED'}
 
 
-
-
 class LISSTResetShape(bpy.types.Operator):
     bl_idname = "object.lisst_reset_shape"
     bl_label = "Reset"
@@ -325,6 +458,81 @@ class LISSTResetShape(bpy.types.Operator):
 
         return {'FINISHED'}
 
+
+class LISSTAddAnimation(bpy.types.Operator, ImportHelper):
+    bl_idname = "object.lisst_add_animation"
+    bl_label = "Add Animation"
+    bl_description = ("Load LISST motion file and create animated SMPL-X body")
+    bl_options = {'REGISTER', 'UNDO'}
+
+    filter_glob: StringProperty(
+        default="*.pkl",
+        options={'HIDDEN'}
+    )
+
+    target_framerate: IntProperty(
+        name="Target framerate [fps]",
+        description="Target framerate for animation in frames-per-second. Lower values will speed up import time.",
+        default=30,
+        min = 1,
+        max = 120
+    )
+
+    @classmethod
+    def poll(cls, context):
+        try:
+            # Always enable button
+            return True
+        except: return False
+
+
+    def execute(self, context):
+
+        target_framerate = self.target_framerate
+
+        # Load .npz file
+        print("Loading: " + self.filepath)
+        with open(self.filepath, "rb") as f:
+            motiondata = pickle.load(f, encoding="latin1")
+        
+        if ("r_locs" not in motiondata) or ("bone_length" not in motiondata) or ("J_rotmat" not in motiondata):
+                self.report({"ERROR"}, "Invalid LISST motion data file")
+                return {"CANCELLED"}
+        duration = motiondata['r_locs'].shape[0]    
+        
+        # add a new body
+        if (context.active_object is not None):
+            bpy.ops.object.mode_set(mode='OBJECT')
+        bpy.ops.scene.lisst_add_mesh()
+        obj = context.view_layer.objects.active        
+        if obj.type == 'ARMATURE':
+            armature = obj
+            obj = bpy.context.object.children[0]
+        else:
+            armature = obj.parent
+
+        # re-scale the bone length
+        rescale_bones(motiondata['J_shape'], armature)
+        set_rest_pose(armature)
+        create_animation_forward_kinematics(armature, motiondata, duration, self.target_framerate)
+
+        return {'FINISHED'}
+
+
+
+
+
+
+###################### for GUI ##################################
+
+# Property groups for UI
+class PG_LISSTProperties(PropertyGroup):
+
+    lisst_mesh: EnumProperty(
+        name = "Model",
+        description = "LISST base mesh",
+        items = [ ("neutral", "Neutral", "") ]
+    )
 
 
 class LISST_PT_Model(bpy.types.Panel):
@@ -360,76 +568,30 @@ class LISST_PT_Shape(bpy.types.Panel):
         col.separator()
 
         
-
-class SMPLX_PT_Pose(bpy.types.Panel):
-    bl_label = "Pose"
-    bl_category = "SMPL-X"
-    bl_space_type = "VIEW_3D"
-    bl_region_type = "UI"
-
-    def draw(self, context):
-        layout = self.layout
-        col = layout.column(align=True)
-
-        col.prop(context.window_manager.lisst_tool, "smplx_corrective_poseshapes")
-        col.separator()
-        col.operator("object.smplx_set_poseshapes")
-
-        col.separator()
-        col.label(text="Hand Pose:")
-        row = col.row(align=True)
-        split = row.split(factor=0.75, align=True)
-        split.prop(context.window_manager.lisst_tool, "smplx_handpose")
-        split.operator("object.smplx_set_handpose", text="Set")
-
-        col.separator()
-        col.operator("object.smplx_write_pose")
-        col.separator()
-        col.operator("object.smplx_load_pose")
-
-
-
-class SMPLX_PT_Animation(bpy.types.Panel):
+class LISST_PT_Animation(bpy.types.Panel):
     bl_label = "Animation"
-    bl_category = "SMPL-X"
+    bl_category = "LISST"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
 
     def draw(self, context):
         layout = self.layout
         col = layout.column(align=True)
-        col.operator("object.smplx_add_animation")
+        col.operator("object.lisst_add_animation")
 
 
 
-class SMPLX_PT_Export(bpy.types.Panel):
-    bl_label = "Export"
-    bl_category = "SMPL-X"
-    bl_space_type = "VIEW_3D"
-    bl_region_type = "UI"
 
-    def draw(self, context):
-        layout = self.layout
-        col = layout.column(align=True)
-
-        col.operator("object.smplx_export_alembic")
-        col.separator()
-
-        col.operator("object.smplx_export_fbx")
-        col.separator()
-
-#        export_button = col.operator("export_scene.obj", text="Export OBJ [m]", icon='EXPORT')
-#        export_button.global_scale = 1.0
-#        export_button.use_selection = True
-#        col.separator()
-
-        row = col.row(align=True)
-        row.operator("ed.undo", icon='LOOP_BACK')
-        row.operator("ed.redo", icon='LOOP_FORWARDS')
-        col.separator()
-
-        (year, month, day) = bl_info["version"]
-        col.label(text="Version: %s-%s-%s" % (year, month, day))
+classes = [
+    PG_LISSTProperties,
+    LISSTAddMesh,
+    LISSTRandomShape,
+    LISSTResetShape,
+    LISSTAddAnimation,
+    LISST_PT_Model,
+    LISST_PT_Shape,
+    LISST_PT_Animation,
+]
 
 
 
@@ -440,7 +602,7 @@ def register():
         bpy.utils.register_class(cls)
 
     # Store properties under WindowManager (not Scene) so that they are not saved in .blend files and always show default values after loading
-    bpy.types.WindowManager.lisst_tool = PointerProperty(type=PG_SMPLXProperties)
+    bpy.types.WindowManager.lisst_tool = PointerProperty(type=PG_LISSTProperties)
 
 def unregister():
     from bpy.utils import unregister_class
