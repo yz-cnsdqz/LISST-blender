@@ -5,7 +5,7 @@
 
 ### Base Body Mesh
 The base body mesh is developped based on the Mixamo Mannequin character.
-Specificially, we re-scale, deform, and repose the original body mesh, so that it can fit the **LISST canonical body skeleton with the mean shape**. Then we ask a professional artist to paint the skinning weights, and combine the LISST body skeleton with the orginal Mixamo hand skeletons. 
+Specificially, we re-scale, deform, and repose the original body mesh, so that it can fit the **LISST canonical body skeleton with the mean shape**. We ask a professional artist to paint the skinning weights, and combine the LISST body skeleton with the orginal Mixamo hand skeletons. 
 The base body mesh is saved in `data/LISST_canonical_mesh.fbx`. After importing, it stands on the ground with *Z-up*. 
 
 ### LISST Motion File
