@@ -254,39 +254,37 @@ def set_rest_pose(armature):
     bpy.context.view_layer.objects.active = armature
 
     for obj in bpy.data.objects:
-
-        if (obj.type == 'MESH'
-            ):
+        if obj.type == 'MESH' and obj.parent == armature:
                 
-                objectToSelect = bpy.data.objects[obj.name]
-                objectToSelect.select_set(True)    
-                bpy.context.view_layer.objects.active = objectToSelect
-                sourceobj = objectToSelect
+            objectToSelect = bpy.data.objects[obj.name]
+            objectToSelect.select_set(True)    
+            bpy.context.view_layer.objects.active = objectToSelect
+            sourceobj = objectToSelect
+            
+            if sourceobj.data.shape_keys is None:
+
+                apply_armature()
+
+            else:
+
+                bpy.ops.object.duplicate(linked=False)
+                duplicateobj = bpy.context.view_layer.objects.active
+                duplicateobj.name="dups"
+                sourceobj.shape_key_clear()
+                bpy.context.view_layer.objects.active = sourceobj
                 
-                if sourceobj.data.shape_keys is None:
-
-                    apply_armature()
-
-                else:
-
-                    bpy.ops.object.duplicate(linked=False)
-                    duplicateobj = bpy.context.view_layer.objects.active
-                    duplicateobj.name="dups"
-                    sourceobj.shape_key_clear()
-                    bpy.context.view_layer.objects.active = sourceobj
-                    
-                    
-                    apply_armature()
-                    
-                    duplicateobj.select_set(True)        
-                    
-                    for idx in range(1, len(duplicateobj.data.shape_keys.key_blocks)):
-                        duplicateobj.active_shape_key_index = idx
-                        print("Copying Shape Key - ", duplicateobj.active_shape_key.name)
-                        bpy.ops.object.shape_key_transfer()
-                    
-                    sourceobj.show_only_shape_key = False
-                    bpy.data.objects.remove(duplicateobj, do_unlink=True)
+                
+                apply_armature()
+                
+                duplicateobj.select_set(True)        
+                
+                for idx in range(1, len(duplicateobj.data.shape_keys.key_blocks)):
+                    duplicateobj.active_shape_key_index = idx
+                    print("Copying Shape Key - ", duplicateobj.active_shape_key.name)
+                    bpy.ops.object.shape_key_transfer()
+                
+                sourceobj.show_only_shape_key = False
+                bpy.data.objects.remove(duplicateobj, do_unlink=True)
                 
                 
                         
@@ -495,7 +493,7 @@ class LISSTAddAnimation(bpy.types.Operator, ImportHelper):
         with open(self.filepath, "rb") as f:
             motiondata = pickle.load(f, encoding="latin1")
         
-        if ("r_locs" not in motiondata) or ("bone_length" not in motiondata) or ("J_locs_3d" not in motiondata)or ("J_rotmat" not in motiondata):
+        if ("r_locs" not in motiondata) or ("J_shape" not in motiondata) or ("J_locs_3d" not in motiondata)or ("J_rotmat" not in motiondata):
                 self.report({"ERROR"}, "Invalid LISST motion data file, one/more motion data key(s) missing")
                 return {"CANCELLED"}
         duration = motiondata['r_locs'].shape[0]    
@@ -515,13 +513,18 @@ class LISSTAddAnimation(bpy.types.Operator, ImportHelper):
         # re-scale the bone length
         rescale_bones(motiondata['J_shape'], armature)
         set_rest_pose(armature)
+        bpy.ops.object.select_all(action='DESELECT')
         bpy.ops.object.mode_set(mode='OBJECT')
-        armature.select_set( state = True, view_layer = bpy.context.view_layer)
+        armature.select_set(state = True, view_layer = bpy.context.view_layer)
         bpy.context.view_layer.objects.active = armature
         bpy.ops.object.rotation_clear()
-        bpy.ops.transform.rotate(value = 180)
+        
         bpy.ops.object.transform_apply()
         create_animation_forward_kinematics(armature, motiondata, duration, self.target_framerate)
+        #optional: align orientation
+        bpy.ops.transform.rotate(value = 3.14, orient_axis='Z')
+        bpy.ops.object.transform_apply()
+        
 
         return {'FINISHED'}
 
