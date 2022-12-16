@@ -12,6 +12,6 @@ if [ -f $archivename ]; then
   rm $archivename
 fi
 
-zip -r "C:/LISST-blender/$archivename" LISST-blender/*.py LISST-blender/*.md LISST-blender/data/*.fbx LISST-blender/data/*.pkl #LISST-blender/data/*.png 
+zip -r "$archivename" LISST-blender/*.py LISST-blender/*.md LISST-blender/data/*.fbx LISST-blender/data/*.pkl #LISST-blender/data/*.png 
 
 popd

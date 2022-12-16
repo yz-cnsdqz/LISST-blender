@@ -1,4 +1,33 @@
 # LISST motion visualization
+
+
+## LISST Base Mesh Animation
+
+### Base Body Mesh
+The base body mesh is developped based on the Mixamo Mannequin character.
+Specificially, we re-scale, deform, and repose the original body mesh, so that it can fit the **LISST canonical body skeleton with the mean shape**. Then we ask a professional artist to paint the skinning weights, and combine the LISST body skeleton with the orginal Mixamo hand skeletons. 
+The base body mesh is saved in `data/LISST_canonical_mesh.fbx`. After importing, it stands on the ground with *Z-up*. 
+
+### LISST Motion File
+Either motion capture or motion synthesis will produce some files to store the motions. To unify all workflows, we define a motion file as a `.pkl` file containing a python dictionary of `numpy.ndarray`:
+```
+motion_data = {
+    'r_locs': ...,      # LISST body root (pelvis) locations in the world coordinate, with shape (t, 1, 3)
+    'J_rotmat': ...,    # LISST joint rotation matrices in world coordinate wrt the canonical rest pose, with shape (t,J,3,3)
+    'J_shape': ...,     # LISST bone lengths, with shape (J,)
+    'J_locs_3d': ...,   # LISST joint locations in the world coordinate, with shape (t,J,3)
+    'J_locs_2d': ...,   # LISST joint locations in indiviual camera views, only available for motion capture results, with shape (t, n_views, J, 2)
+}
+```
+
+### Animation
+
+The animation process consists of two steps. First, we rescale the body mesh according to the input `J_shape`. Second, we transfer the motion data to the armature. Note that we *DON'T* transfer the joint locations, because the bone roll will be lost. Instead, we transfer the root locations and the bone rotations. Blender automatically solves all local transformations via forward kinematics.
+
+
+
+## Motion Retargeting
+
 ### Retarget and Montion Drive Update 13.12.2022
 We switch our retargeting pipline to rokoko https://github.com/Rokoko/rokoko-studio-live-blender
 
