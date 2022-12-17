@@ -522,8 +522,96 @@ class LISSTAddAnimation(bpy.types.Operator, ImportHelper):
         bpy.ops.object.transform_apply()
         create_animation_forward_kinematics(armature, motiondata, duration, self.target_framerate)
         #optional: align orientation
-        bpy.ops.transform.rotate(value = 3.14, orient_axis='Z')
+        bpy.ops.transform.rotate(value = 3.141592654, orient_axis='Z')
         bpy.ops.object.transform_apply()
+        
+
+        return {'FINISHED'}
+
+
+
+
+
+
+class LISSTAddAnimationBatch(bpy.types.Operator, ImportHelper):
+    bl_idname = "object.lisst_add_animation_batch"
+    bl_label = "Add Animation Batch"
+    bl_description = ("Load LISST motion file and create a batch of LISST animations")
+    bl_options = {'REGISTER', 'UNDO'}
+
+    filter_glob: StringProperty(
+        default="*.pkl",
+        options={'HIDDEN'}
+    )
+
+    target_framerate: IntProperty(
+        name="Target framerate [fps]",
+        description="Target framerate for animation in frames-per-second. Lower values will speed up import time.",
+        default=30,
+        min = 1,
+        max = 120
+    )
+
+    @classmethod
+    def poll(cls, context):
+        try:
+            # Always enable button
+            return True
+        except: return False
+
+
+    def execute(self, context):
+
+        target_framerate = self.target_framerate
+
+        # Load .npz file
+        print("Loading: " + self.filepath)
+        with open(self.filepath, "rb") as f:
+            motiondata_all = pickle.load(f, encoding="latin1")
+        
+        if ("r_locs" not in motiondata_all) or ("J_shape" not in motiondata_all) or ("J_locs_3d" not in motiondata_all)or ("J_rotmat" not in motiondata_all):
+                self.report({"ERROR"}, "Invalid LISST motion data file, one/more motion data key(s) missing")
+                return {"CANCELLED"}
+        duration = motiondata_all['r_locs'].shape[0]    
+        n_batches = motiondata_all['r_locs'].shape[1]
+        
+        for b in range(n_batches):
+            print('-- processing animation {:03d}'.format(b))
+            # add a new body
+            if (context.active_object is not None):
+                bpy.ops.object.mode_set(mode='OBJECT')
+            bpy.ops.scene.lisst_add_mesh()
+            obj = context.view_layer.objects.active        
+            if obj.type == 'ARMATURE':
+                armature = obj
+                obj = bpy.context.object.children[0]
+            else:
+                armature = obj.parent
+        
+            # get one batch
+            motiondata = {}
+            for key, val in motiondata_all.items():
+                if key == 'J_shape':
+                    motiondata[key] = val[b]
+                elif key == 'J_locs_2d':
+                    continue
+                else:
+                    motiondata[key] = val[:,b]
+        
+            # re-scale the bone length
+            rescale_bones(motiondata['J_shape'], armature)
+            set_rest_pose(armature)
+            bpy.ops.object.select_all(action='DESELECT')
+            bpy.ops.object.mode_set(mode='OBJECT')
+            armature.select_set(state = True, view_layer = bpy.context.view_layer)
+            bpy.context.view_layer.objects.active = armature
+            bpy.ops.object.rotation_clear()
+            
+            bpy.ops.object.transform_apply()
+            create_animation_forward_kinematics(armature, motiondata, duration, self.target_framerate)
+            #optional: align orientation
+            bpy.ops.transform.rotate(value = 3.141592654, orient_axis='Z')
+            bpy.ops.object.transform_apply()
         
 
         return {'FINISHED'}
@@ -588,7 +676,9 @@ class LISST_PT_Animation(bpy.types.Panel):
         layout = self.layout
         col = layout.column(align=True)
         col.operator("object.lisst_add_animation")
-
+        col.separator()
+        col.operator("object.lisst_add_animation_batch")
+        col.separator()
 
 
 
@@ -598,6 +688,7 @@ classes = [
     LISSTRandomShape,
     LISSTResetShape,
     LISSTAddAnimation,
+    LISSTAddAnimationBatch,
     LISST_PT_Model,
     LISST_PT_Shape,
     LISST_PT_Animation,
