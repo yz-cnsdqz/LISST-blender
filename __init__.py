@@ -196,7 +196,7 @@ ROT_TO_BLENDER = ROT_X_NEG90 @ ROT_Z_180
 path = os.path.dirname(os.path.realpath(__file__))
 shape_space = np.load(os.path.join(path, "data", "LISST_shape_space.pkl"), allow_pickle=True)
 JOINT_DEFAULT_ORIENTATION = shape_space['template_joint_directions']
-BDOY_MEAN_SHAPE = shape_space['meanshape']
+BODY_MEAN_SHAPE = shape_space['meanshape']
 SHAPE_BASIS=shape_space['shape_basis']
 SHAPE_EIGVALS = shape_space['eigvals']
 
@@ -224,8 +224,10 @@ def rescale_bones(bone_lengths, mesh_armature):
     #rescale
     for mesh_bone in mesh_armature.pose.bones:
         if mesh_bone.name in INVOLVED_BONES:
+            bone_idx = JOINT_NAMES.index(BONE_CHILD_NAMES[mesh_bone.name])
             target_length = bone_lengths[JOINT_NAMES.index(BONE_CHILD_NAMES[mesh_bone.name])]
-            scale = target_length / mesh_bone.length * 100
+            # scale = target_length / mesh_bone.length * 100
+            scale = target_length / BODY_MEAN_SHAPE[bone_idx]
             mesh_bone.scale = Vector((scale,scale,scale))
         else: continue
 
@@ -321,6 +323,7 @@ def create_animation_forward_kinematics(armature, motiondata, duration=60, frame
         rootloc = np.eye(4) 
         #last row and last col = loc
         rootloc[:-1, -1] = joint_locs[0]
+        rootloc[:-1, :-1] = joint_rotmats[0]
         rootbone.matrix = Matrix(rootloc)
         bpy.context.view_layer.update()
 
@@ -340,11 +343,11 @@ def create_animation_forward_kinematics(armature, motiondata, duration=60, frame
                 ## transform w.r.t. the armature obj coordinate
                 transf = np.eye(4)
                 transf[:-1,:-1] = joint_rotmats[child_joint_index]
-                
-                if bone_name in ['left_hip', 'right_hip']:
-                    transf[:-1, -1] = joint_locs[0]
-                else:
-                    transf[:-1, -1] = joint_locs[parent_joint_index]
+                transf[:-1, -1] = joint_locs[parent_joint_index]
+                # if bone_name in ['left_hip', 'right_hip']:
+                #     transf[:-1, -1] = joint_locs[0]
+                # else:
+                #     transf[:-1, -1] = joint_locs[parent_joint_index]
                 M = (
                 Matrix(transf) @ 
                 Matrix(transf1)
@@ -424,10 +427,10 @@ class LISSTRandomShape(bpy.types.Operator):
         
         # random draw a bone length
         zdim = 15
-        z = np.random.randn(zdim)
+        z = 30*np.random.randn(zdim)
         eigvals = SHAPE_EIGVALS[:zdim]
         z = z * eigvals
-        bone_lengths = BDOY_MEAN_SHAPE + np.einsum('ij,j->i',SHAPE_BASIS[:,:zdim], z)
+        bone_lengths = BODY_MEAN_SHAPE + np.einsum('ij,j->i',SHAPE_BASIS[:,:zdim], z)
         rescale_bones(bone_lengths, obj)
 
         return {'FINISHED'}
@@ -452,7 +455,7 @@ class LISSTResetShape(bpy.types.Operator):
         bpy.ops.object.mode_set(mode='OBJECT')
         
         # set the bone length
-        rescale_bones(BDOY_MEAN_SHAPE, obj)
+        rescale_bones(BODY_MEAN_SHAPE, obj)
 
         return {'FINISHED'}
 
