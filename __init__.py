@@ -334,7 +334,13 @@ def create_animation_forward_kinematics(armature, motiondata, duration=60, frame
                 if bone_name in ['left_thumb', 'right_thumb', 'left_fingers', 'right_fingers', 'left_hand', 'right_hand', 'right_toes', 'left_toes']:
                     continue
                 parent_joint_index = JOINT_NAMES.index(parent)
-                child_joint_index = JOINT_NAMES.index(child)
+                # child_joint_index = JOINT_NAMES.index(child)
+                if parent == 'lradius':
+                   child_joint_index = JOINT_NAMES.index('lhand')
+                elif parent == 'rradius':
+                    child_joint_index = JOINT_NAMES.index('rhand')
+                else:
+                    child_joint_index = JOINT_NAMES.index(child)
                 
                 ## canonical transform
                 transf1 = np.eye(4)
