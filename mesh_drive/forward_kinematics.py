@@ -1,3 +1,5 @@
+import sys
+sys.path.append("C:\LISST-blender\mesh_drive")
 import pickle
 import os
 import bpy
@@ -271,74 +273,97 @@ def create_animation_forward_kinematics(armature, motiondata, duration=60):
             bone.keyframe_insert('location', frame=frame)
             bone.keyframe_insert('scale', frame=frame)
 
+def update_inputs(inertializer, foot, ground_level):
+    
+    inertializer['input_contact_position'] = foot.matrix.translation.copy()
+    foot_z = inertializer['input_contact_position'][2]
+    inertializer['input_contact_state'] = (foot_z <= ground_level)
+    return inertializer
 
-def fix_sliding(armature, n = 0.245):
-    """fix the feet sliding issue by checking their contact with the floor, currently not working
+def update_position(bone, frame, inertializer, foot):
+    
+    if inertializer['contact_lock']:
+        foot.matrix.translation = inertializer['contact_position']
+        bpy.context.view_layer.update()
+        bone.keyframe_insert('location', frame=frame)
+        print('yeah')
+    # else:
+    #     foot.matrix.translation = inertializer['input_contact_position']
+
+    
+
+
+def update_inertializer(inertializer, foot, unlock_radius):
+    unlock_contact = inertializer['contact_lock'] and (inertializer['contact_position'] - inertializer['input_contact_position']).length > unlock_radius
+    print(unlock_contact)
+    if not inertializer['contact_state'] and inertializer['input_contact_state']:
+        inertializer['contact_lock'] = True
+        inertializer['contact_position'] = foot.matrix.translation.copy()
+        # contact_point.y = foot_height
+    
+    elif ( inertializer['contact_lock'] and inertializer['contact_state'] and not inertializer['input_contact_state']) or unlock_contact:
+        inertializer['contact_lock'] = False
+    return inertializer
+
+def fix_sliding(armature, ground_level):
+    """This function loops  over the existing frames and updates the input contact state per frame, updates the contact
 
     Args:
-        armature (bpy_types.Object): the target armature
-        n (float, optional): the distance between the foot pose bone and the (x,y,0) plane. Defaults to 0.245.
+        armature (_type_): _description_
+        ground_level (_type_): _description_
+        bpy.data.objects['Armature.006'].pose.bones['mixamorig:LeftToe_End']
     """
+    #step1: unconnect toe ends
+    for pb in ['mixamorig:LeftToe_End', 'mixamorig:RightToe_End']:
+        bpy.ops.object.mode_set(mode='POSE')#pose mode
+        bpy.ops.pose.select_all(action = 'DESELECT')
+        foot = armature.pose.bones[pb]
+        #Set as active 
+        bpy.context.object.data.bones.active = foot.bone
+        #Select in viewport
+        foot.bone.select = True
+
+        bpy.ops.object.mode_set(mode='EDIT')
+
+        # bpy.ops.armature.parent_clear(type='CLEAR')
+        # bpy.context.active_bone.parent = None
+        bpy.context.active_bone.use_connect = False
+
+        bpy.ops.object.mode_set(mode='POSE')
+        bpy.ops.pose.select_all(action = 'DESELECT')
+
+    #step2: inertializer
+    left_foot = armature.pose.bones['mixamorig:LeftToe_End']
+    right_foot = armature.pose.bones['mixamorig:RightToe_End']
     scene = bpy.data.scenes['Scene']
-    left_foot = armature.pose.bones['mixamorig:LeftFoot']
-    right_foot = armature.pose.bones['mixamorig:RightFoot']
-    #currently in contact?
-    l_contact = False
-    r_contact = False
-    #is it the first contacting frame?
-    l_first_contact = False
-    r_first_contact = False
-    #there are previous contacting frame(s)?
-    l_pre_contact = False
-    r_pre_contact = False
+    #initialize inertializers
+    left_inertializer = {
+        'contact_state' : False,
+        'contact_lock' : False,
+        'contact_position' : left_foot.matrix.translation.copy(),
+        'contact_velocity' : Vector((0,0,0)),
+        'input_contact_position' : Vector((0,0,0)),
+        'input_contact_state' : False
+        }
+    right_inertializer = {
+        'contact_state' : False,
+        'contact_lock' : False,
+        'contact_position' : right_foot.matrix.translation.copy(),
+        'contact_velocity' : Vector((0,0,0)),
+        'input_contact_position' : Vector((0,0,0)),
+        'input_contact_state' : False
+        }
+    #initialize ik constraint
 
+    
     for frame in range(scene.frame_start,scene.frame_end+1):
+        # print(left_inertializer['contact_lock'])
         scene.frame_set(frame)
-        lf_z = left_foot.matrix.translation[2]
-        rf_z = right_foot.matrix.translation[2]
-        l_contact = lf_z < n
-        r_contact = rf_z < n
-
-        if not l_pre_contact and l_contact:
-            l_first_contact = True
-        if not r_pre_contact and r_contact:
-            r_first_contact = True
+        left_inertializer = update_inputs(left_inertializer, left_foot, ground_level)
+        left_inertializer = update_inertializer(left_inertializer, left_foot, unlock_radius = 0.01)
+        left_inertializer['contact_state'] = left_inertializer['input_contact_state']
+        update_position(left_foot, frame, left_inertializer, left_foot)
         
-        if l_first_contact:
-            lloc=np.array([left_foot.matrix.translation[0],left_foot.matrix.translation[1],n])
-            l_pre_contact = True
-            l_first_contact = False
-        if r_first_contact:
-            rloc=np.array([right_foot.matrix.translation[0],right_foot.matrix.translation[1],n])
-            r_pre_contact = True
-            l_first_contact = False
-        if l_contact:
-            lmat = np.eye(4)
-            lmat[:-1, :-1] = np.array(left_foot.matrix)[:-1,:-1]
-            lmat[:-1,-1] = lloc
-
-            #this is currently where the problem is: this assignment does not work
-            left_foot.matrix = Matrix(lmat)
-            
-            left_foot.keyframe_insert('rotation_quaternion', frame=frame)
-            left_foot.keyframe_insert('location', frame=frame)
-            bpy.context.view_layer.update()
-        if r_contact:
-            rmat = np.eye(4)
-            rmat[:-1, :-1] = np.array(right_foot.matrix)[:-1,:-1]
-            rmat[:-1,-1] = rloc
-
-            #same here
-            right_foot.matrix = Matrix(rmat)
-            
-            right_foot.keyframe_insert('rotation_quaternion', frame=frame)
-            right_foot.keyframe_insert('location', frame=frame)
-            bpy.context.view_layer.update()
-        if not l_contact:
-            l_pre_contact = False
-        if not r_contact:
-            r_pre_contact = False
-
 
 def set_rest_pose(armature):
     """set the current pose of the armature as the rest pose
@@ -458,7 +483,8 @@ if __name__ == '__main__':
         
         """demo2: get the imported armature with mesh, rescale, set new rest pose, create fk animation
         """
-        # armature2 = bpy.data.objects['Armature.001']
+        armature2 = bpy.data.objects['Armature.006']
+        fix_sliding(armature2, 0)
         # rescale_bones(motiondata['J_shape'], armature2)
         # set_rest_pose(armature2)
         # create_animation_forward_kinematics(armature2, motiondata, duration)
