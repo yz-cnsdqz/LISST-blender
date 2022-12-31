@@ -389,8 +389,7 @@ def set_rest_pose(armature):
 
     for obj in bpy.data.objects:
 
-        if (obj.type == 'MESH'
-            ):
+        if obj.type == 'MESH' and obj.parent == armature:
                 
                 objectToSelect = bpy.data.objects[obj.name]
                 objectToSelect.select_set(True)    
