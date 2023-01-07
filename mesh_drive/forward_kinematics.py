@@ -273,10 +273,10 @@ def create_animation_forward_kinematics(armature, motiondata, duration=60):
             bone.keyframe_insert('location', frame=frame)
             bone.keyframe_insert('scale', frame=frame)
 
-def update_inputs(inertializer, foot, ground_level):
+def update_inputs(inertializer, foot, ik_target, ground_level):
     
     
-    inertializer['input_contact_position'] = foot.matrix.translation.copy()
+    inertializer['input_contact_position'] = ik_target.matrix.translation.copy()
     inertializer['input_contact_point'] = foot.tail.copy()
     foot_z = inertializer['input_contact_point'][2]
     
@@ -284,32 +284,32 @@ def update_inputs(inertializer, foot, ground_level):
     # print(inertializer['input_contact_state'])
     return inertializer
 
-def update_position(foot, frame, inertializer):
+def update_position(ik_target, frame, inertializer):
     
     if inertializer['contact_lock']:
         # foot.keyframe_delete('location', frame=frame)
-        foot.matrix.translation = inertializer['contact_position']
+        ik_target.matrix.translation = inertializer['contact_position']
         bpy.context.view_layer.update()
-        # foot.keyframe_insert('location', frame=frame)
+        ik_target.keyframe_insert('location', frame=frame)
         print('lock contact at')
         print(frame)
         print(inertializer['contact_position'])
-        print(foot.matrix)
+        print(ik_target.matrix)
     # else:
     #     foot.matrix.translation = inertializer['input_contact_position']
 
     
 
 
-def update_inertializer(inertializer, foot, unlock_radius):
+def update_inertializer(inertializer, ik_target, unlock_radius):
     unlock_contact = inertializer['contact_lock'] and (inertializer['contact_position'] - inertializer['input_contact_position']).length > unlock_radius
-    # if unlock_contact:
-    #     print(unlock_contact)
+    if unlock_contact:
+        print(unlock_contact)
     
     if inertializer['contact_state'] == False and inertializer['input_contact_state']== True:
         
         inertializer['contact_lock'] = True
-        inertializer['contact_position'] = foot.matrix.translation.copy()
+        inertializer['contact_position'] = ik_target.matrix.translation.copy()
         # contact_point.y = foot_height
         
     
@@ -327,7 +327,7 @@ def fix_sliding(armature, ground_level):
         bpy.data.objects['Armature.001'].pose.bones['mixamorig:LeftFoot']
     """
 
-    #step1: unconnect toe ends
+    #step1: unconnect feet
     for pb in ['mixamorig:LeftFoot', 'mixamorig:RightFoot']:
         bpy.ops.object.mode_set(mode='POSE')#pose mode
         bpy.ops.pose.select_all(action = 'DESELECT')
@@ -349,6 +349,8 @@ def fix_sliding(armature, ground_level):
     #step2: inertializer
     left_foot = armature.pose.bones['mixamorig:LeftFoot']
     right_foot = armature.pose.bones['mixamorig:RightFoot']
+    left_ik_target = armature.pose.bones['mixamorig:LeftLegIK']
+    right_ik_target = armature.pose.bones['mixamorig:RightLegIK']
     scene = bpy.data.scenes['Scene']
     #initialize inertializers
     left_inertializer = {
@@ -374,16 +376,20 @@ def fix_sliding(armature, ground_level):
     
     for frame in range(scene.frame_start,scene.frame_end+1):
         # print(left_inertializer['contact_lock'])
+        transf1 = np.eye(4)
+        transf1[:-1, :-1] = np.array(left_foot.bone.matrix_local)[:-1,:-1]
+        #transf1[:-1, :-1] = np.array(canonical_bone_matrixes[bone_name])[:-1,:-1]
         scene.frame_set(frame)
-        # left_inertializer = update_inputs(left_inertializer, left_foot, ground_level)
-        # left_inertializer = update_inertializer(left_inertializer, left_foot, unlock_radius = 0.01)
-        # left_inertializer['contact_state'] = left_inertializer['input_contact_state']
-        # update_position(left_foot, frame, left_inertializer)
-        right_inertializer = update_inputs(right_inertializer, right_foot, ground_level)
-        right_inertializer = update_inertializer(right_inertializer, right_foot, unlock_radius = 0.01)
+        left_inertializer = update_inputs(left_inertializer, left_foot,left_ik_target, ground_level)
+        left_inertializer = update_inertializer(left_inertializer, left_ik_target, unlock_radius = 0.01)
+        left_inertializer['contact_state'] = left_inertializer['input_contact_state']
+        update_position(left_ik_target, frame, left_inertializer)
+        right_inertializer = update_inputs(right_inertializer, right_foot, right_ik_target, ground_level)
+        right_inertializer = update_inertializer(right_inertializer, right_ik_target, unlock_radius = 0.01)
         right_inertializer['contact_state'] = right_inertializer['input_contact_state']
-        print(right_inertializer['contact_lock'])
-        update_position(right_foot, frame, right_inertializer)
+        # print(right_inertializer['contact_lock'])
+        update_position(right_ik_target, frame, right_inertializer)
+
         
 
 def set_rest_pose(armature):
