@@ -275,18 +275,26 @@ def create_animation_forward_kinematics(armature, motiondata, duration=60):
 
 def update_inputs(inertializer, foot, ground_level):
     
+    
     inertializer['input_contact_position'] = foot.matrix.translation.copy()
-    foot_z = inertializer['input_contact_position'][2]
+    inertializer['input_contact_point'] = foot.tail.copy()
+    foot_z = inertializer['input_contact_point'][2]
+    
     inertializer['input_contact_state'] = (foot_z <= ground_level)
+    # print(inertializer['input_contact_state'])
     return inertializer
 
-def update_position(bone, frame, inertializer, foot):
+def update_position(foot, frame, inertializer):
     
     if inertializer['contact_lock']:
+        # foot.keyframe_delete('location', frame=frame)
         foot.matrix.translation = inertializer['contact_position']
         bpy.context.view_layer.update()
-        bone.keyframe_insert('location', frame=frame)
-        print('yeah')
+        # foot.keyframe_insert('location', frame=frame)
+        print('lock contact at')
+        print(frame)
+        print(inertializer['contact_position'])
+        print(foot.matrix)
     # else:
     #     foot.matrix.translation = inertializer['input_contact_position']
 
@@ -295,14 +303,19 @@ def update_position(bone, frame, inertializer, foot):
 
 def update_inertializer(inertializer, foot, unlock_radius):
     unlock_contact = inertializer['contact_lock'] and (inertializer['contact_position'] - inertializer['input_contact_position']).length > unlock_radius
-    print(unlock_contact)
-    if not inertializer['contact_state'] and inertializer['input_contact_state']:
+    # if unlock_contact:
+    #     print(unlock_contact)
+    
+    if inertializer['contact_state'] == False and inertializer['input_contact_state']== True:
+        
         inertializer['contact_lock'] = True
         inertializer['contact_position'] = foot.matrix.translation.copy()
         # contact_point.y = foot_height
+        
     
-    elif ( inertializer['contact_lock'] and inertializer['contact_state'] and not inertializer['input_contact_state']) or unlock_contact:
+    elif (inertializer['contact_lock'] and inertializer['contact_state'] and not inertializer['input_contact_state']) or unlock_contact:
         inertializer['contact_lock'] = False
+    # print(inertializer['contact_lock'])
     return inertializer
 
 def fix_sliding(armature, ground_level):
@@ -311,10 +324,11 @@ def fix_sliding(armature, ground_level):
     Args:
         armature (_type_): _description_
         ground_level (_type_): _description_
-        bpy.data.objects['Armature.006'].pose.bones['mixamorig:LeftToe_End']
+        bpy.data.objects['Armature.001'].pose.bones['mixamorig:LeftFoot']
     """
+
     #step1: unconnect toe ends
-    for pb in ['mixamorig:LeftToe_End', 'mixamorig:RightToe_End']:
+    for pb in ['mixamorig:LeftFoot', 'mixamorig:RightFoot']:
         bpy.ops.object.mode_set(mode='POSE')#pose mode
         bpy.ops.pose.select_all(action = 'DESELECT')
         foot = armature.pose.bones[pb]
@@ -333,15 +347,16 @@ def fix_sliding(armature, ground_level):
         bpy.ops.pose.select_all(action = 'DESELECT')
 
     #step2: inertializer
-    left_foot = armature.pose.bones['mixamorig:LeftToe_End']
-    right_foot = armature.pose.bones['mixamorig:RightToe_End']
+    left_foot = armature.pose.bones['mixamorig:LeftFoot']
+    right_foot = armature.pose.bones['mixamorig:RightFoot']
     scene = bpy.data.scenes['Scene']
     #initialize inertializers
     left_inertializer = {
         'contact_state' : False,
         'contact_lock' : False,
         'contact_position' : left_foot.matrix.translation.copy(),
-        'contact_velocity' : Vector((0,0,0)),
+        'contact_point' : left_foot.tail.copy(),
+        # 'contact_velocity' : Vector((0,0,0)),
         'input_contact_position' : Vector((0,0,0)),
         'input_contact_state' : False
         }
@@ -349,7 +364,8 @@ def fix_sliding(armature, ground_level):
         'contact_state' : False,
         'contact_lock' : False,
         'contact_position' : right_foot.matrix.translation.copy(),
-        'contact_velocity' : Vector((0,0,0)),
+        'contact_point' : right_foot.tail.copy(),#the tail of the foot bone is where the contact happens
+        # 'contact_velocity' : Vector((0,0,0)),
         'input_contact_position' : Vector((0,0,0)),
         'input_contact_state' : False
         }
@@ -359,10 +375,15 @@ def fix_sliding(armature, ground_level):
     for frame in range(scene.frame_start,scene.frame_end+1):
         # print(left_inertializer['contact_lock'])
         scene.frame_set(frame)
-        left_inertializer = update_inputs(left_inertializer, left_foot, ground_level)
-        left_inertializer = update_inertializer(left_inertializer, left_foot, unlock_radius = 0.01)
-        left_inertializer['contact_state'] = left_inertializer['input_contact_state']
-        update_position(left_foot, frame, left_inertializer, left_foot)
+        # left_inertializer = update_inputs(left_inertializer, left_foot, ground_level)
+        # left_inertializer = update_inertializer(left_inertializer, left_foot, unlock_radius = 0.01)
+        # left_inertializer['contact_state'] = left_inertializer['input_contact_state']
+        # update_position(left_foot, frame, left_inertializer)
+        right_inertializer = update_inputs(right_inertializer, right_foot, ground_level)
+        right_inertializer = update_inertializer(right_inertializer, right_foot, unlock_radius = 0.01)
+        right_inertializer['contact_state'] = right_inertializer['input_contact_state']
+        print(right_inertializer['contact_lock'])
+        update_position(right_foot, frame, right_inertializer)
         
 
 def set_rest_pose(armature):
@@ -482,7 +503,7 @@ if __name__ == '__main__':
         
         """demo2: get the imported armature with mesh, rescale, set new rest pose, create fk animation
         """
-        armature2 = bpy.data.objects['Armature.006']
+        armature2 = bpy.data.objects['Armature.001']
         fix_sliding(armature2, 0)
         # rescale_bones(motiondata['J_shape'], armature2)
         # set_rest_pose(armature2)
