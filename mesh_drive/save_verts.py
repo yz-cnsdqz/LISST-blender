@@ -18,6 +18,7 @@ verts_all = np.stack(verts_all)
 
 print(verts_all.shape)
 
-outfilename = '/home/yzhang/Desktop/verts_all.npy'
+#outfilename = '/home/yzhang/Desktop/verts_all.npy'
+outfilename = r'C:\Users\hshang\Downloads\CoreView_394_verts.npy'
 
 np.save(outfilename, verts_all)

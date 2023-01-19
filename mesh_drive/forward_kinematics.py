@@ -208,7 +208,7 @@ def create_animation_forward_kinematics(armature, motiondata, duration=60):
     scene = bpy.data.scenes['Scene']
     scene.render.fps = FPS_TARGET
     joint_rot_data = motiondata['J_rotmat']
-    joint_loc_data = motiondata['J_locs']
+    joint_loc_data = motiondata['J_locs_3d']
     scene.frame_start = 0
     scene.frame_end = 10+min(len(joint_rot_data), duration)
 
@@ -515,15 +515,15 @@ if __name__ == '__main__':
         duration=100
         """demo1: create armature and create fk animation
         """
-        # armature1 = create_armature(motiondata['J_shape'], "forward_kinematics_body")
-        # create_animation_forward_kinematics(armature1, motiondata, duration)
+        armature1 = create_armature(motiondata['J_shape'], "forward_kinematics_body")
+        create_animation_forward_kinematics(armature1, motiondata, duration)
         
         """demo2: get the imported armature with mesh, rescale, set new rest pose, create fk animation
         """
-        armature2 = bpy.data.objects['Armature.002']
-        copy_pb_matrices(armature2.pose.bones['mixamorig:LeftFoot'],armature2.pose.bones['mixamorig:LeftLegIK'])
-        copy_pb_matrices(armature2.pose.bones['mixamorig:RightFoot'],armature2.pose.bones['mixamorig:RightLegIK'])
-        fix_sliding(armature2, 0, 0.045)
+        # armature2 = bpy.data.objects['Armature.002']
+        # copy_pb_matrices(armature2.pose.bones['mixamorig:LeftFoot'],armature2.pose.bones['mixamorig:LeftLegIK'])
+        # copy_pb_matrices(armature2.pose.bones['mixamorig:RightFoot'],armature2.pose.bones['mixamorig:RightLegIK'])
+        # fix_sliding(armature2, 0, 0.045)
         # rescale_bones(motiondata['J_shape'], armature2)
         # set_rest_pose(armature2)
         # create_animation_forward_kinematics(armature2, motiondata, duration)

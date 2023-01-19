@@ -4,7 +4,21 @@ pushd ..
 filedate=$(date '+%Y%m%d')
 
 # Build 10 shape model add-on
+#default
 archivename=./lisst_blender_addon_$filedate.zip
+
+case "$OSTYPE" in
+  solaris*) echo "SOLARIS" ;;
+  darwin*)  echo "OSX" ;; 
+  linux*)   echo "LINUX" ;;
+  bsd*)     echo "BSD" ;;
+  msys*)    
+    echo "WINDOWS" 
+    archivename=./LISST-blender/lisst_blender_addon_$filedate.zip
+    ;;
+  *)        echo "unknown: $OSTYPE" ;;
+esac
+
 echo "Generating $archivename"
 
 if [ -f $archivename ]; then
