@@ -20,6 +20,19 @@ motion_data = {
 }
 ```
 
+For **add_animation_batch**, the file format is as follows, in which the batch dimension is right after the time dimension.
+```
+motion_data = {
+    'r_locs': ...,      # LISST body root (pelvis) locations in the world coordinate, with shape (t, b, 1, 3)
+    'J_rotmat': ...,    # LISST joint rotation matrices in world coordinate wrt the canonical rest pose, with shape (t,b,J,3,3)
+    'J_shape': ...,     # LISST bone lengths, with shape (b,J)
+    'J_locs_3d': ...,   # LISST joint locations in the world coordinate, with shape (t,b,J,3)
+    'J_locs_2d': ...,   # LISST joint locations in indiviual camera views, only available for motion capture results, with shape (t, b, n_views, J, 2)
+}
+```
+
+
+
 ### Animation
 
 The animation process consists of two steps. First, we rescale the body mesh according to the input `J_shape`. Second, we transfer the motion data to the armature. Note that we *DON'T* transfer the joint locations, because the bone roll will be lost. Instead, we transfer the root locations and the bone rotations. Blender automatically solves all local transformations via forward kinematics.
