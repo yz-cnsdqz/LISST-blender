@@ -531,8 +531,8 @@ class LISSTAddAnimation(bpy.types.Operator, ImportHelper):
         bpy.ops.object.transform_apply()
         create_animation_forward_kinematics(armature, motiondata, duration, self.target_framerate)
         #optional: align orientation
-        bpy.ops.transform.rotate(value = 3.141592654, orient_axis='Z')
-        bpy.ops.object.transform_apply()
+        # bpy.ops.transform.rotate(value = 3.141592654, orient_axis='Z')
+        # bpy.ops.object.transform_apply()
         
 
         return {'FINISHED'}
@@ -619,8 +619,8 @@ class LISSTAddAnimationBatch(bpy.types.Operator, ImportHelper):
             bpy.ops.object.transform_apply()
             create_animation_forward_kinematics(armature, motiondata, duration, self.target_framerate)
             #optional: align orientation
-            bpy.ops.transform.rotate(value = 3.141592654, orient_axis='Z')
-            bpy.ops.object.transform_apply()
+            # bpy.ops.transform.rotate(value = 3.141592654, orient_axis='Z')
+            # bpy.ops.object.transform_apply()
         
 
         return {'FINISHED'}
