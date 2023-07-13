@@ -312,6 +312,12 @@ def create_animation_forward_kinematics(armature, motiondata, duration=60, frame
     joint_loc_data = motiondata['J_locs_3d']
     scene.frame_start = 0
     scene.frame_end = 10+min(len(joint_rot_data), duration)
+    if "cam_poses" in motiondata:
+        camera_poses = motiondata['cam_poses']
+        cam = bpy.data.objects['Camera']
+        pre_matrix = Matrix(((1, 0, 0, 0), (0, -1, 0, 0), (0, 0, -1, 0), (0, 0, 0, 1)))
+        post_matrix = Matrix(((1, 0, 0, 0), (0, -1, 0, 0), (0, 0, -1, 0), (0, 0, 0, 1)))
+
 
     for frame in range(min(len(joint_rot_data), duration)):
         scene.frame_set(frame)
@@ -373,6 +379,12 @@ def create_animation_forward_kinematics(armature, motiondata, duration=60, frame
             bone.keyframe_insert('location', frame=frame)
             bone.keyframe_insert('scale', frame=frame)
 
+        # insert camera pose
+        if "cam_poses" in motiondata:
+            pose = np.linalg.inv(camera_poses[frame])
+            matrix = pre_matrix @ Matrix(pose.tolist()) @ post_matrix
+            cam.matrix_world = matrix
+            cam.keyframe_insert(data_path='matrix_world', frame=frame)
 
 
 
@@ -533,29 +545,7 @@ class LISSTAddAnimation(bpy.types.Operator, ImportHelper):
         #optional: align orientation
         # bpy.ops.transform.rotate(value = 3.141592654, orient_axis='Z')
         # bpy.ops.object.transform_apply()
-        if "cam_pose" in motiondata:
-            cam_poses = motiondata['cam_pose']
-            scene = bpy.context.scene
-            cam = bpy.data.objects['Camera'] # Adjust if your camera has a different name
-
-            # Set animation length
-            scene.frame_end = len(cam_poses)
-
-            # Iterate over each pose matrix
-            for frame, pose in enumerate(cam_poses, start=1):
-                # Convert numpy array to Blender Matrix
-                matrix = Matrix(pose.tolist())
-                
-                # In Blender, camera points towards its -Z axis and the up direction is the Y axis
-                # Depending on your camera poses you might need to adjust for this
-                rotate = Matrix.Rotation(np.pi / 2, 4, 'X')
-                matrix = matrix @ rotate
-                
-                # Set the matrix to the camera
-                cam.matrix_world = matrix
-
-                # Keyframe each matrix transformation for the animation
-                cam.keyframe_insert(data_path='matrix_world', frame=frame)
+        
 
         return {'FINISHED'}
 
