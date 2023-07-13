@@ -533,7 +533,29 @@ class LISSTAddAnimation(bpy.types.Operator, ImportHelper):
         #optional: align orientation
         # bpy.ops.transform.rotate(value = 3.141592654, orient_axis='Z')
         # bpy.ops.object.transform_apply()
-        
+        if "cam_pose" in motiondata:
+            cam_poses = motiondata['cam_pose']
+            scene = bpy.context.scene
+            cam = bpy.data.objects['Camera'] # Adjust if your camera has a different name
+
+            # Set animation length
+            scene.frame_end = len(cam_poses)
+
+            # Iterate over each pose matrix
+            for frame, pose in enumerate(cam_poses, start=1):
+                # Convert numpy array to Blender Matrix
+                matrix = Matrix(pose.tolist())
+                
+                # In Blender, camera points towards its -Z axis and the up direction is the Y axis
+                # Depending on your camera poses you might need to adjust for this
+                rotate = Matrix.Rotation(np.pi / 2, 4, 'X')
+                matrix = matrix @ rotate
+                
+                # Set the matrix to the camera
+                cam.matrix_world = matrix
+
+                # Keyframe each matrix transformation for the animation
+                cam.keyframe_insert(data_path='matrix_world', frame=frame)
 
         return {'FINISHED'}
 
