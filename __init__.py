@@ -315,8 +315,10 @@ def create_animation_forward_kinematics(armature, motiondata, duration=60, frame
     if "cam_poses" in motiondata:
         camera_poses = motiondata['cam_poses']
         cam = bpy.data.objects['Camera']
-        pre_matrix = Matrix(((1, 0, 0, 0), (0, -1, 0, 0), (0, 0, -1, 0), (0, 0, 0, 1)))
-        post_matrix = Matrix(((1, 0, 0, 0), (0, -1, 0, 0), (0, 0, -1, 0), (0, 0, 0, 1)))
+        R_x = Matrix(((1, 0, 0, 0), 
+              (0, -1, 0, 0), 
+              (0, 0, -1, 0), 
+              (0, 0, 0, 1)))
 
 
     for frame in range(min(len(joint_rot_data), duration)):
@@ -381,10 +383,15 @@ def create_animation_forward_kinematics(armature, motiondata, duration=60, frame
 
         # insert camera pose
         if "cam_poses" in motiondata:
-            pose = np.linalg.inv(camera_poses[frame])
-            matrix = pre_matrix @ Matrix(pose.tolist()) @ post_matrix
-            cam.matrix_world = matrix
-            cam.keyframe_insert(data_path='matrix_world', frame=frame)
+            matrix = R_x @ Matrix(pose.tolist()) @ R_x.transposed()
+            loc, rot, _ = matrix.decompose()
+            rot_euler = rot.to_euler('XYZ')
+            cam.location = loc
+            cam.rotation_euler = rot_euler
+
+            # Insert keyframes for location and rotation
+            cam.keyframe_insert(data_path='location', frame=frame)
+            cam.keyframe_insert(data_path='rotation_euler', frame=frame)
 
 
 
