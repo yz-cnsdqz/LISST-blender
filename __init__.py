@@ -384,7 +384,7 @@ def create_animation_forward_kinematics(armature, motiondata, duration=60, frame
         # insert camera pose
         if "cam_poses" in motiondata:
             pose = camera_poses[frame]
-            matrix = R_x @ Matrix(pose.tolist()) @ R_x.transposed()
+            matrix = Matrix(pose.tolist()) @ R_x
             loc, rot, _ = matrix.decompose()
             rot_euler = rot.to_euler('XYZ')
             cam.location = loc
