@@ -315,10 +315,10 @@ def create_animation_forward_kinematics(armature, motiondata, duration=60, frame
     if "cam_poses" in motiondata:
         camera_poses = motiondata['cam_poses']
         cam = bpy.data.objects['Camera']
-        R_x = Matrix(((1, 0, 0, 0), 
-              (0, -1, 0, 0), 
-              (0, 0, -1, 0), 
-              (0, 0, 0, 1)))
+        R_x = Matrix(((1, 0, 0, 0),
+                    (0, -1, 0, 0),
+                    (0, 0, -1, 0),
+                    (0, 0, 0, 1)))
 
 
     for frame in range(min(len(joint_rot_data), duration)):
