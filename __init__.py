@@ -320,6 +320,12 @@ def create_animation_forward_kinematics(armature, motiondata, duration=60, frame
                     (0, 0, -1, 0),
                     (0, 0, 0, 1)))
 
+    mat_locals = {}
+    for bone_name in BONE_NAMES.values():
+        if bone_name in ['left_thumb', 'right_thumb', 'left_fingers', 'right_fingers', 'left_hand', 'right_hand', 'right_toes', 'left_toes']:
+            continue
+        mat_locals[bone_name]=np.array(armature.pose.bones[bone_name].bone.matrix_local)
+
 
     for frame in range(min(len(joint_rot_data), duration)):
         scene.frame_set(frame)
@@ -352,7 +358,8 @@ def create_animation_forward_kinematics(armature, motiondata, duration=60, frame
                 
                 ## canonical transform
                 transf1 = np.eye(4)
-                transf1[:-1, :-1] = np.array(armature.pose.bones[bone_name].bone.matrix_local)[:-1,:-1]
+                # transf1[:-1, :-1] = np.array(armature.pose.bones[bone_name].bone.matrix_local)[:-1,:-1]
+                transf1[:-1, :-1] = mat_locals[bone_name][:-1,:-1]
                 
                 ## transform w.r.t. the armature obj coordinate
                 transf = np.eye(4)
@@ -362,14 +369,13 @@ def create_animation_forward_kinematics(armature, motiondata, duration=60, frame
                 #     transf[:-1, -1] = joint_locs[0]
                 # else:
                 #     transf[:-1, -1] = joint_locs[parent_joint_index]
-                M = (
-                Matrix(transf) @ 
-                Matrix(transf1)
-                ) 
+                M = Matrix(transf) @ Matrix(transf1)
+                
                 armature.pose.bones[bone_name].matrix = M #armature.pose.bones[bone_name].matrix
                 
-                ##refresh the context
-                bpy.context.view_layer.update()
+            ##refresh the context
+            bpy.context.view_layer.update()
+                
                 
         armature.keyframe_insert('location', frame=frame)
         armature.keyframe_insert('rotation_quaternion', frame=frame)
@@ -381,6 +387,8 @@ def create_animation_forward_kinematics(armature, motiondata, duration=60, frame
             bone.keyframe_insert('location', frame=frame)
             bone.keyframe_insert('scale', frame=frame)
 
+        
+        
         # insert camera pose
         if "cam_poses" in motiondata:
             pose = camera_poses[frame]
@@ -393,7 +401,6 @@ def create_animation_forward_kinematics(armature, motiondata, duration=60, frame
             # Insert keyframes for location and rotation
             cam.keyframe_insert(data_path='location', frame=frame)
             cam.keyframe_insert(data_path='rotation_euler', frame=frame)
-
 
 
 
